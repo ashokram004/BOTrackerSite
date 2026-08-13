@@ -1,0 +1,233 @@
+:root {
+  --pad: 40px;
+  --bg-dark: #080a0f;
+  --bg-slate: #0f1218;
+  --text-bright: #ffffff;
+  --text-normal: #e8e8f0;
+  --text-muted: #a0a0b4;
+  --color-green: #4ade80;
+  --color-red: #f87171;
+  --color-orange: #f5a623;
+  --panel-radius: 24px;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-normal);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background Glowing Orbs */
+.bg-orbs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(150px);
+}
+
+.orb-1 {
+  width: 800px;
+  height: 800px;
+  background: rgba(51, 65, 85, 0.4);
+  top: -200px;
+  left: -200px;
+}
+
+.orb-2 {
+  width: 1000px;
+  height: 1000px;
+  background: rgba(30, 41, 59, 0.5);
+  bottom: -300px;
+  right: -300px;
+}
+
+.orb-3 {
+  width: 600px;
+  height: 600px;
+  background: rgba(245, 166, 35, 0.05);
+  bottom: 10%;
+  left: 30%;
+}
+
+.app-container {
+  padding: var(--pad);
+  max-width: 2560px;
+  margin: 0 auto;
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--panel-radius);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 40px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 3rem;
+  color: var(--text-bright);
+}
+
+.header .sub-text {
+  font-size: 1.5rem;
+  color: var(--color-orange);
+  margin-top: 10px;
+}
+
+.header .meta {
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+/* KPIs */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.kpi-card {
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.kpi-card .strip {
+  position: absolute;
+  left: 0;
+  top: 10%;
+  bottom: 10%;
+  width: 6px;
+  background: var(--color-orange);
+  border-radius: 0 4px 4px 0;
+  opacity: 0.8;
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.kpi-label {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.kpi-sub {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.kpi-sub.positive { color: var(--color-green); }
+.kpi-sub.negative { color: var(--color-red); }
+.kpi-sub.neutral { color: var(--text-muted); }
+
+.kpi-val {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+/* Tables */
+.tables-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-bottom: 40px;
+}
+
+.table-container {
+  padding: 0;
+}
+
+.table-title {
+  font-size: 1.8rem;
+  color: var(--text-bright);
+  padding: 30px 35px;
+  margin: 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+thead {
+  background: rgb(0, 0, 0);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+th {
+  background: rgb(0, 0, 0);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 15px 35px;
+  text-transform: uppercase;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+td {
+  padding: 20px 35px;
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+th.align-right, td.align-right { text-align: right; }
+
+.td-highlight { color: var(--text-bright); }
+.td-accent { color: var(--color-orange); }
+.td-positive { color: var(--color-green); }
+.td-negative { color: var(--color-red); }
+.td-muted { color: var(--text-muted); }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}

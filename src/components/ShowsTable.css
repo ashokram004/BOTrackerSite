@@ -1,0 +1,26 @@
+.shows-rows tr{animation:fadeUp .45s ease both}
+
+.report-shows-section{padding:14px}
+
+.shows-title{display:flex;justify-content:space-between;align-items:center;margin:0 0 10px;font-size:14px;font-weight:650;color:var(--text)}
+.shows-sub{color:var(--muted);font-size:11px;font-weight:650}
+
+.row-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.row-badge.available{background:rgba(22,163,74,.15);color:var(--green);border:1px solid rgba(74,222,128,.22)}
+.row-badge.sold-out{background:rgba(248,113,113,.15);color:var(--red);border:1px solid rgba(248,113,113,.22)}
+
+.th-sorted{cursor:pointer}
+
+.td-format{color:#fbbf24;font-weight:800}
+.td-language{color:#a78bfa;font-weight:800}
+.td-theater{max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.td-muted{color:var(--muted)}
+.td-right{text-align:right}
+.td-gross{font-weight:900}
+.td-empty{color:var(--muted);text-align:center;padding:20px 10px}
+
+/* Keep table from overflowing the right edge inside the glass panel */
+.report-table{table-layout:fixed;}
+.report-table th,.report-table td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+
