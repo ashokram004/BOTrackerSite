@@ -343,13 +343,13 @@ export const IndiaMovieDashboard = ({ rows = [], movieName = 'Movie', showDate =
         </div>
 
         <div className="dashboard-row">
-          {renderTable('Time of Day Analysis', timeSummary)}
-          {renderTable('Demand Tiers', occTierSummary)}
+          {renderTable('State Breakdown', stateSummary)}
+          {renderTable('Top Cities', citySummary)}
         </div>
 
         <div className="dashboard-row">
-          {renderTable('State Breakdown', stateSummary)}
-          {renderTable('Top Cities', citySummary)}
+          {renderTable('Time of Day Analysis', timeSummary)}
+          {renderTable('Demand Tiers', occTierSummary)}
         </div>
 
         <div className="summary-section" style={{ marginBottom: '20px' }}>
