@@ -14,6 +14,7 @@ import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
 import './App.css';
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const REGION_META = {
   usa: {
@@ -45,26 +46,6 @@ const prettifySlug = (value) =>
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const getRouteState = (pathname) => {
-  const segments = pathname.split('/').filter(Boolean).map((segment) => decodeURIComponent(segment));
-  const region = segments[0] === 'usa' || segments[0] === 'india' ? segments[0] : null;
-  const movieSlug = region && segments[1] ? segments[1] : null;
-  const showDate = movieSlug && segments[2] ? segments[2] : null;
-
-  return {
-    region,
-    movie: movieSlug ? { id: movieSlug, name: prettifySlug(movieSlug) } : null,
-    date: showDate
-  };
-};
-
-const getRoutePath = (region, movie, showDate) => {
-  if (!region) return '/';
-  if (!movie) return `/${region}`;
-  if (!showDate) return `/${region}/${encodeURIComponent(movie.id)}`;
-  return `/${region}/${encodeURIComponent(movie.id)}/${encodeURIComponent(showDate)}`;
-};
 
 const sessionMovieCache = new Map();
 const sessionDateCache = new Map();
@@ -120,13 +101,16 @@ const loadNodeWithRetry = async (roots, attempts = 4) => {
 };
 
 function App() {
-  const initialRoute = getRouteState(window.location.pathname);
-  const [selectedRegion, setSelectedRegion] = useState(initialRoute.region);
+  const { region: routeRegion, movie: routeMovieSlug, date: routeDate } = useParams();
+  const navigate = useNavigate();
+  const normalizedRegion = routeRegion === 'usa' || routeRegion === 'india' ? routeRegion : null;
+  const routeMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
+  const [selectedRegion, setSelectedRegion] = useState(normalizedRegion);
   const [movies, setMovies] = useState([]);
-  const [selectedMovie, setSelectedMovie] = useState(initialRoute.movie);
+  const [selectedMovie, setSelectedMovie] = useState(routeMovie);
   const [dates, setDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(initialRoute.date);
-  const [movieLoading, setMovieLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(routeDate || null);
+  const [movieLoading, setMovieLoading] = useState(Boolean(normalizedRegion && !routeMovieSlug));
   const [movieError, setMovieError] = useState(null);
   const [dateLoading, setDateLoading] = useState(false);
   const [dateError, setDateError] = useState(null);
@@ -135,27 +119,16 @@ function App() {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    const handlePopState = () => {
-      const route = getRouteState(window.location.pathname);
-      setSelectedRegion(route.region);
-      setSelectedMovie(route.movie);
-      setSelectedDate(route.date);
-      setMovies([]);
-      setDates([]);
+    const nextMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
+    const timerId = setTimeout(() => {
+      setSelectedRegion(normalizedRegion);
+      setSelectedMovie(nextMovie);
+      setSelectedDate(routeDate || null);
       setMovieError(null);
       setDateError(null);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-
-  useEffect(() => {
-    const routePath = getRoutePath(selectedRegion, selectedMovie, selectedDate);
-    if (window.location.pathname !== routePath) {
-      window.history.replaceState(null, '', routePath);
-    }
-  }, [selectedRegion, selectedMovie, selectedDate]);
+    }, 0);
+    return () => clearTimeout(timerId);
+  }, [normalizedRegion, routeDate, routeMovieSlug]);
 
   useEffect(() => {
     if (!selectedRegion) {
@@ -207,7 +180,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [selectedRegion]);
+  }, [routeMovieSlug, selectedRegion]);
 
   useEffect(() => {
     if (!selectedRegion || !selectedMovie) {
@@ -498,6 +471,7 @@ function App() {
     setSelectedDate(null);
     setMovieLoading(true);
     setDateLoading(false);
+    navigate(`/${key}`);
   };
 
   const renderDashboard = () => {
@@ -512,15 +486,20 @@ function App() {
           movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
           showDate={selectedDateValue}
           lastUpdated={indiaDashboardData.lastUpdated || 'N/A'}
-          onBack={() => setSelectedDate(null)}
+          onBack={() => {
+            setSelectedDate(null);
+            navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}`);
+          }}
           onChangeMovie={() => {
             setSelectedDate(null);
             setSelectedMovie(null);
+            navigate(`/${selectedRegion}`);
           }}
           onHome={() => {
             setSelectedDate(null);
             setSelectedMovie(null);
             setSelectedRegion(null);
+            navigate('/');
           }}
           onReload={() => setIndiaRefreshKey((value) => value + 1)}
         />
@@ -544,9 +523,17 @@ function App() {
                   setSelectedDate(null);
                   setSelectedMovie(null);
                   setSelectedRegion(null);
+                  navigate('/');
                 }, variant: 'secondary' },
-              { label: 'Change Movie', onClick: () => setSelectedMovie(null), variant: 'secondary' },
-              { label: 'Change Date', onClick: () => setSelectedDate(null), variant: 'secondary' },
+              { label: 'Change Movie', onClick: () => {
+                  setSelectedMovie(null);
+                  setSelectedDate(null);
+                  navigate(`/${selectedRegion}`);
+                }, variant: 'secondary' },
+              { label: 'Change Date', onClick: () => {
+                  setSelectedDate(null);
+                  navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}`);
+                }, variant: 'secondary' },
               { label: 'Reload Data', onClick: () => setReloadKey((value) => value + 1), variant: 'secondary' }
             ]}
             rightActions={[
@@ -673,7 +660,10 @@ function App() {
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Market</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{REGION_META[selectedRegion].label}</h2>
           </div>
-          <button onClick={() => setSelectedRegion(null)} className="toggle-filter-btn">Back</button>
+          <button onClick={() => {
+            setSelectedRegion(null);
+            navigate('/');
+          }} className="toggle-filter-btn">Back</button>
         </div>
 
         {movieLoading ? (
@@ -692,6 +682,7 @@ function App() {
                   setDateLoading(true);
                   setDateError(null);
                   setSelectedMovie(movie);
+                  navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
                 }}
                 className="selection-card"
                 style={{
@@ -723,7 +714,10 @@ function App() {
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Movie</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{selectedMovie.name}</h2>
           </div>
-          <button onClick={() => setSelectedMovie(null)} className="toggle-filter-btn">Back</button>
+          <button onClick={() => {
+            setSelectedMovie(null);
+            navigate(`/${selectedRegion}`);
+          }} className="toggle-filter-btn">Back</button>
         </div>
 
         {dateLoading ? (
@@ -738,7 +732,10 @@ function App() {
               <button
                 key={date}
                 type="button"
-                onClick={() => setSelectedDate(date)}
+                onClick={() => {
+                  setSelectedDate(date);
+                  navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovie.id)}/${encodeURIComponent(date)}`);
+                }}
                 className="selection-card"
                 style={{
                   background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.7))',
