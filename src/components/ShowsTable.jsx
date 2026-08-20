@@ -21,6 +21,7 @@ const getOccupancyColor = (occ) => {
 export const ShowsTable = ({ rows }) => {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
+  const [showAll, setShowAll] = useState(false);
 
   const onSortKey = (key) => {
     if (sortKey === key) {
@@ -46,6 +47,9 @@ export const ShowsTable = ({ rows }) => {
     return copy;
   }, [rows, sortKey, sortDir]);
 
+  const rowLimit = 20;
+  const visibleRows = showAll ? sorted : sorted.slice(0, rowLimit);
+
   const th = (key, label, align = 'left') => (
     <th
       onClick={() => onSortKey?.(key)}
@@ -60,7 +64,7 @@ export const ShowsTable = ({ rows }) => {
       <h2>
         All Showtimes
         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-          {(sorted.length-1).toLocaleString()} shows | Click on any column heading to sort
+          {sorted.length.toLocaleString()} shows | Click on any column heading to sort
         </span>
       </h2>
 
@@ -82,7 +86,7 @@ export const ShowsTable = ({ rows }) => {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r) => (
+            {visibleRows.map((r) => (
               <tr key={r.id}>
                 <td className="state-col" style={{ textAlign: 'left' }}>
                   {String(r.state).slice(0, 4).toUpperCase()}
@@ -113,6 +117,20 @@ export const ShowsTable = ({ rows }) => {
           </tbody>
         </table>
       </div>
+
+      {sorted.length > rowLimit && (
+        <div style={{ textAlign: 'center', paddingTop: '16px' }}>
+          <button
+            type="button"
+            onClick={() => setShowAll((value) => !value)}
+            className="toggle-btn"
+          >
+            {showAll
+              ? 'Show Top 20'
+              : `Show Remaining ${(sorted.length - rowLimit).toLocaleString()} Shows`}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

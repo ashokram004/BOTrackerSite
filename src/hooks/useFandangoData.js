@@ -5,6 +5,11 @@ import { database } from '../firebaseConfig';
 const DEFAULT_MOVIE_SLUG = 'peddi-2026';
 const DEFAULT_SHOW_DATE = '2026-06-03';
 const DEFAULT_REGION = 'usa';
+const sessionDashboardCache = new Map();
+
+window.addEventListener('pagehide', () => {
+  sessionDashboardCache.clear();
+});
 
 const getMovieRootCandidates = (region) => {
   const normalized = String(region || '').toLowerCase();
@@ -225,14 +230,15 @@ const buildIndiaDashboard = (payload) => {
 };
 
 export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) => {
-  const options = typeof diffModeOrOptions === 'string'
+  const usesLegacyArguments = typeof diffModeOrOptions === 'string';
+  const options = usesLegacyArguments
     ? { diffMode: diffModeOrOptions, ...maybeOptions }
     : { diffMode: 'daily', ...diffModeOrOptions };
 
   const diffMode = options.diffMode || 'daily';
   const region = options.region || DEFAULT_REGION;
-  const movieSlug = options.movieSlug || DEFAULT_MOVIE_SLUG;
-  const showDate = options.showDate || DEFAULT_SHOW_DATE;
+  const movieSlug = options.movieSlug || (usesLegacyArguments ? DEFAULT_MOVIE_SLUG : '');
+  const showDate = options.showDate || (usesLegacyArguments ? DEFAULT_SHOW_DATE : '');
   const enabled = options.enabled !== undefined ? options.enabled : true;
   const includeDifferences = options.includeDifferences !== undefined ? options.includeDifferences : region !== 'india';
   const refreshKey = options.refreshKey || 0;
@@ -258,11 +264,16 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     growthSinceDaily: 'N/A',
     growthSinceHourly: 'N/A'
   });
+  const requestIdRef = useRef(0);
 
   const process = useCallback(() => {
+    if (!enabled) return;
+
     const { currentData, dailySnapshot, hourlySnapshot, historyDataRaw, lastUpdated, growthSinceDaily, growthSinceHourly } = refs.current;
 
     const isIndia = String(region).toLowerCase() === 'india';
+
+    if (!isIndia && !currentData) return;
 
     if (isIndia) {
       const indiaPayload = normalizeFirebasePayload(currentData || dailySnapshot || hourlySnapshot || {});
@@ -808,7 +819,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       return `${formattedDay} ${formattedMonth} ${formattedYear}, ${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`;
     }
 
-    setData({
+    const nextData = {
       loading: false,
       kpis,
       tables,
@@ -819,15 +830,31 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       metadata: {
         lastUpdated: formatDate(lastUpdated),
         growthSince: growthSince,
-        showDate
+        showDate,
+        movieSlug
       },
       error: null
-    });
+    };
 
-  }, [diffMode, showDate]);
+    sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}`, nextData);
+    setData(nextData);
+
+  }, [diffMode, enabled, movieSlug, region, showDate]);
 
   useEffect(() => {
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+
     if (!enabled) {
+      refs.current = {
+        currentData: null,
+        dailySnapshot: null,
+        hourlySnapshot: null,
+        historyDataRaw: null,
+        lastUpdated: 'N/A',
+        growthSinceDaily: 'N/A',
+        growthSinceHourly: 'N/A'
+      };
       setData({
         loading: false,
         kpis: null,
@@ -852,6 +879,23 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       growthSinceHourly: 'N/A'
     };
 
+    const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}`;
+    if (refreshKey > 0) sessionDashboardCache.delete(cacheKey);
+    if (sessionDashboardCache.has(cacheKey)) {
+      const cachedData = sessionDashboardCache.get(cacheKey);
+      let timerId;
+      const frameId = requestAnimationFrame(() => {
+        timerId = setTimeout(() => {
+          if (requestIdRef.current === requestId) setData(cachedData);
+        }, 0);
+      });
+      return () => {
+        if (requestIdRef.current === requestId) requestIdRef.current += 1;
+        cancelAnimationFrame(frameId);
+        clearTimeout(timerId);
+      };
+    }
+
     const paths = getMovieDateCandidates(region, movieSlug);
     const validPaths = paths.filter(Boolean);
     const unsubscribes = [];
@@ -866,6 +910,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       const historyRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/history`);
 
       const unsubCurrent = onValue(currentRef, (snapshot) => {
+        if (requestIdRef.current !== requestId) return;
         if (!snapshot.exists()) return;
         const payload = normalizeFirebasePayload(snapshot.val());
         if (!payload || (!payload.data && !payload.master_shows_data && !payload.last_snapshot)) return;
@@ -876,6 +921,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         }
         process();
       }, (error) => {
+          if (requestIdRef.current !== requestId) return;
           setData(prev => ({ ...prev, loading: false, error: error.message }));
       });
 
@@ -884,6 +930,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       if (isIndia) return;
 
       const unsubSnapshot = onValue(snapshotRef, (snapshot) => {
+        if (requestIdRef.current !== requestId) return;
         if (!snapshot.exists()) return;
         const payload = normalizeFirebasePayload(snapshot.val());
         if (!payload || (!payload.data && !payload.last_snapshot)) return;
@@ -896,6 +943,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       });
 
       const unsubHourlySnapshot = onValue(hourlySnapshotRef, (snapshot) => {
+        if (requestIdRef.current !== requestId) return;
         if (!snapshot.exists()) return;
         const payload = normalizeFirebasePayload(snapshot.val());
         if (!payload || (!payload.data && !payload.previous_run_snapshot)) return;
@@ -908,6 +956,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       });
 
       const unsubHistory = onValue(historyRef, (snapshot) => {
+        if (requestIdRef.current !== requestId) return;
         if (!snapshot.exists()) return;
         const hData = snapshot.val();
         if (!hData) return;
@@ -922,13 +971,15 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     validPaths.forEach((pathPrefix) => attachListener(pathPrefix));
 
     return () => {
+      if (requestIdRef.current === requestId) requestIdRef.current += 1;
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
   }, [enabled, movieSlug, process, region, showDate, refreshKey]);
 
   useEffect(() => {
+    if (!enabled) return;
     process();
-  }, [diffMode, process, refreshKey]);
+  }, [diffMode, enabled, process, refreshKey]);
 
   return {
     ...data,

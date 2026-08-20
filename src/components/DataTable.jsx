@@ -94,10 +94,10 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
                 <td colSpan={6} style={{ textAlign: 'center', padding: '18px', borderBottom: 'none' }}>
                   <button
                     onClick={() => setShowAll((prev) => !prev)}
-                    className="btn-toggle"
+                    className="toggle-btn"
                     style={{ width: 'auto', padding: '10px 18px' }}
                   >
-                    {showAll ? 'Hide Full List' : 'Show Full List'}
+                    {showAll ? 'Show Top 20' : `Show Remaining ${data.length - rowLimit}`}
                   </button>
                 </td>
               </tr>

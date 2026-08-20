@@ -15,5 +15,6 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+const databaseUrl = import.meta.env.VITE_FIREBASE_DATABASE_URL;
 
-export { database };
+export { database, databaseUrl };

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 const parseNumber = (val) => {
   if (val === null || val === undefined) return 0;
@@ -42,9 +42,12 @@ const formatToIst = (timestamp) => {
 };
 
 export const HistoryTable = ({ data }) => {
+  const [showAll, setShowAll] = useState(false);
+  const rowLimit = 20;
   const sorted = useMemo(() => {
     return [...(data || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [data]);
+  const visibleRows = showAll ? sorted : sorted.slice(0, rowLimit);
 
   return (
     <div className="summary-section" style={{ marginTop: '20px' }}>
@@ -69,7 +72,7 @@ export const HistoryTable = ({ data }) => {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((r, i) => (
+            {visibleRows.map((r, i) => (
               <tr key={i}>
                 <td style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
                   {formatToIst(r.timestamp)}
@@ -96,6 +99,20 @@ export const HistoryTable = ({ data }) => {
           </tbody>
         </table>
       </div>
+
+      {sorted.length > rowLimit && (
+        <div style={{ textAlign: 'center', paddingTop: '16px' }}>
+          <button
+            type="button"
+            onClick={() => setShowAll((value) => !value)}
+            className="toggle-btn"
+          >
+            {showAll
+              ? 'Show Top 20'
+              : `Show Remaining ${(sorted.length - rowLimit).toLocaleString()} Snapshots`}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

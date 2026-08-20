@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { onValue, ref } from 'firebase/database';
+import { get, ref } from 'firebase/database';
 import { database } from '../firebaseConfig';
 
 const toNumber = (value) => {
@@ -7,13 +7,25 @@ const toNumber = (value) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const sessionIndiaDashboardCache = new Map();
+
+window.addEventListener('pagehide', () => {
+  sessionIndiaDashboardCache.clear();
+});
+
+const timeFormatter = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true
+});
+
 const formatTimeValue = (value) => {
   if (!value || value === 'Unknown') return 'Unknown';
 
   try {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+      return timeFormatter.format(date);
     }
   } catch {
     // noop
@@ -30,7 +42,6 @@ const getTimeCategory = (timeValue) => {
   const hourMatch = raw.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
   const hour = match ? Number(match[1]) : hourMatch ? Number(hourMatch[1]) : null;
   const ampm = match ? null : (hourMatch?.[3] || '').toLowerCase();
-
   if (hour === null) return '7. Unknown Time';
   const normalizedHour = (() => {
     let value = hour;
@@ -45,31 +56,6 @@ const getTimeCategory = (timeValue) => {
   if (normalizedHour >= 16 && normalizedHour < 20) return 'Evening (4pm-8pm)';
   if (normalizedHour >= 20 && normalizedHour < 24) return 'Night (8pm-12am)';
   return 'Midnight (12am-5am)';
-};
-
-const extractLastUpdated = (value) => {
-  const queue = [value];
-  const seen = new Set();
-
-  while (queue.length) {
-    const item = queue.shift();
-    if (!item || typeof item !== 'object') continue;
-    const identity = typeof item === 'object' ? JSON.stringify(item) : String(item);
-    if (seen.has(identity)) continue;
-    seen.add(identity);
-
-    const candidate = item.last_updated || item.lastUpdated || item.updated_at || item.updatedAt || item.timestamp || item.timeStamp || item.lastSync;
-    if (candidate) return candidate;
-
-    if (Array.isArray(item)) {
-      queue.push(...item);
-      continue;
-    }
-
-    queue.push(...Object.values(item));
-  }
-
-  return null;
 };
 
 const formatIstDate = (value) => {
@@ -113,7 +99,6 @@ const isIndiaRowCandidate = (row = {}) => {
 
 const getRowIdentity = (row = {}) => {
   const state = row.state || row.State || '';
-  const city = row.city || row.City || '';
   const cityKey = row.city || row.City || row.reporting_city || '';
   const theater = row.venue || row.theater || row.theatre || row.venue_name || '';
   const time = row.normalized_show_time || row.show_time || row.time || row.showTime || '';
@@ -150,6 +135,7 @@ const normalizeIndiaRow = (row = {}) => {
     booked,
     gross,
     occ: occupancy,
+    occTier: occupancy >= 100 ? 'Sold Out' : occupancy >= 80 ? 'Almost Full' : occupancy >= 50 ? 'Fast Filling' : 'Available',
     status: occupancy >= 100 ? 'Sold Out' : occupancy >= 80 ? 'Almost Full' : occupancy >= 50 ? 'Fast Filling' : 'Available',
     price_str: row.price || row.ticket_price || '₹0',
     chain: sourceType,
@@ -162,32 +148,56 @@ const normalizeIndiaRow = (row = {}) => {
 const flattenIndiaPayload = (value) => {
   if (!value) return [];
 
-  const queue = Array.isArray(value) ? [...value] : [value];
-  const seen = new Set();
+  const stack = [value];
+  const visited = new WeakSet();
+  const rowIdentities = new Set();
   const rows = [];
+  let lastUpdated = null;
 
-  while (queue.length) {
-    const current = queue.shift();
+  while (stack.length) {
+    const current = stack.pop();
     if (!current || typeof current !== 'object') continue;
+    if (visited.has(current)) continue;
+    visited.add(current);
 
     if (Array.isArray(current)) {
-      queue.push(...current);
+      for (let index = current.length - 1; index >= 0; index -= 1) {
+        stack.push(current[index]);
+      }
       continue;
+    }
+
+    if (!lastUpdated) {
+      lastUpdated = current.last_updated || current.lastUpdated || current.updated_at || current.updatedAt || current.timestamp || current.timeStamp || current.lastSync || null;
     }
 
     if (isIndiaRowCandidate(current)) {
       const normalized = normalizeIndiaRow(current);
-      const identity = getRowIdentity(normalized.raw || current);
-      if (!seen.has(identity)) {
-        seen.add(identity);
+      const identity = getRowIdentity(current);
+      if (!rowIdentities.has(identity)) {
+        rowIdentities.add(identity);
         rows.push(normalized);
       }
     }
 
-    queue.push(...Object.values(current));
+    const values = Object.values(current);
+    for (let index = values.length - 1; index >= 0; index -= 1) {
+      const child = values[index];
+      if (child && typeof child === 'object' && !visited.has(child)) {
+        stack.push(child);
+      }
+    }
   }
 
-  return rows;
+  return {
+    rows,
+    lastUpdated
+  };
+};
+
+const getRowsFromPayload = (value) => {
+  const flattened = flattenIndiaPayload(value);
+  return flattened || { rows: [], lastUpdated: null };
 };
 
 export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0 }) => {
@@ -195,52 +205,63 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
 
   useEffect(() => {
     if (!enabled || !movieSlug || !showDate) {
-      setData({ loading: false, rows: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A' });
       return undefined;
     }
 
-    const candidates = [`India/movies/${movieSlug}/${showDate}`];
+    const candidates = [`India/movies/${movieSlug}/${showDate}/master_shows_data`];
+    const cacheKey = `${movieSlug}/${showDate}`;
+    let active = true;
 
-    let settled = false;
-    const unsubscribes = [];
+    if (refreshKey > 0) sessionIndiaDashboardCache.delete(cacheKey);
+    if (sessionIndiaDashboardCache.has(cacheKey)) {
+      const cachedData = sessionIndiaDashboardCache.get(cacheKey);
+      let timerId;
+      const frameId = requestAnimationFrame(() => {
+        timerId = setTimeout(() => {
+          if (active) setData(cachedData);
+        }, 100);
+      });
+      return () => {
+        active = false;
+        cancelAnimationFrame(frameId);
+        clearTimeout(timerId);
+      };
+    }
 
     const finalize = (rows, error = null, lastUpdatedValue = null) => {
-      if (settled) return;
-      settled = true;
-      setData({
+      if (!active) return;
+      const nextData = {
         loading: false,
         rows: rows || [],
         error,
         movieName: movieSlug,
         showDate,
         lastUpdated: formatIstDate(lastUpdatedValue || 'N/A')
-      });
+      };
+      sessionIndiaDashboardCache.set(cacheKey, nextData);
+      setData(nextData);
     };
 
-    candidates.forEach((path) => {
-      const refPath = ref(database, path);
-      const unsubscribe = onValue(refPath, (snapshot) => {
-        if (!snapshot.exists()) return;
-
-        const value = snapshot.val();
-        const extractedTimestamp = extractLastUpdated(value);
-        const rows = flattenIndiaPayload(value);
-        if (rows.length > 0) {
-          finalize(rows, null, extractedTimestamp || rows.find((row) => row.lastUpdated)?.lastUpdated || null);
+    const loadDashboard = async () => {
+      try {
+        const snapshot = await get(ref(database, candidates[0]));
+        if (!snapshot.exists()) {
+          finalize([]);
+          return;
         }
-      }, (error) => {
-        if (!settled) finalize([], error.message);
-      });
 
-      unsubscribes.push(unsubscribe);
-    });
+        const flattened = getRowsFromPayload(snapshot.val());
+        const rows = flattened.rows;
+        finalize(rows, null, flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null);
+      } catch (error) {
+        finalize([], error.message);
+      }
+    };
 
-    setTimeout(() => {
-      if (!settled) finalize([]);
-    }, 1800);
+    loadDashboard();
 
     return () => {
-      unsubscribes.forEach((unsubscribe) => unsubscribe());
+      active = false;
     };
   }, [enabled, movieSlug, showDate, refreshKey]);
 

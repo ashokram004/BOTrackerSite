@@ -10,8 +10,8 @@ import { generateImageReport } from './utils/imageGenerator';
 import { PacingChart } from './components/PacingChart';
 import { IndiaMovieDashboard } from './components/IndiaMovieDashboard';
 import { DashboardHeader } from './components/DashboardHeader';
-import { database } from './firebaseConfig';
-import { ref, onValue } from 'firebase/database';
+import { database, databaseUrl } from './firebaseConfig';
+import { get, ref } from 'firebase/database';
 import './App.css';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -46,6 +46,59 @@ const prettifySlug = (value) =>
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const sessionMovieCache = new Map();
+const sessionDateCache = new Map();
+
+window.addEventListener('pagehide', () => {
+  sessionMovieCache.clear();
+  sessionDateCache.clear();
+});
+
+const getShallowPath = (path) => {
+  if (!databaseUrl) return null;
+  const encodedPath = path.split('/').map((segment) => encodeURIComponent(segment)).join('/');
+  return `${databaseUrl.replace(/\/$/, '')}/${encodedPath}.json?shallow=true`;
+};
+
+const loadShallowKeys = async (path) => {
+  const shallowPath = getShallowPath(path);
+  if (!shallowPath) return null;
+
+  try {
+    const response = await fetch(shallowPath);
+    if (!response.ok) return null;
+    return response.json();
+  } catch (error) {
+    console.warn('Firebase shallow metadata unavailable; using SDK fallback.', error);
+    return null;
+  }
+};
+
+const hasKeys = (value) => value && typeof value === 'object' && Object.keys(value).length > 0;
+
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const loadNodeWithRetry = async (roots, attempts = 4) => {
+  let lastError = null;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const shallow = await loadShallowKeys(roots[0]);
+      if (hasKeys(shallow)) return shallow;
+
+      const snapshots = await Promise.all(roots.map((rootPath) => get(ref(database, rootPath))));
+      const snapshot = snapshots.find((candidate) => candidate.exists());
+      if (snapshot) return snapshot.val() || {};
+      throw new Error(`Firebase path not found: ${roots[0]}`);
+    } catch (error) {
+      lastError = error;
+      if (attempt < attempts - 1) await wait(500 * (attempt + 1));
+    }
+  }
+
+  throw lastError || new Error('Firebase request failed');
+};
+
 function App() {
   const [selectedRegion, setSelectedRegion] = useState(null);
   const [movies, setMovies] = useState([]);
@@ -53,132 +106,106 @@ function App() {
   const [dates, setDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [movieLoading, setMovieLoading] = useState(false);
+  const [movieError, setMovieError] = useState(null);
   const [dateLoading, setDateLoading] = useState(false);
-  const [diffMode, setDiffMode] = useState('daily');
+  const [dateError, setDateError] = useState(null);
+  const [diffMode, setDiffMode] = useState('hourly');
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!selectedRegion) {
-      setMovies([]);
-      setSelectedMovie(null);
-      setDates([]);
-      setSelectedDate(null);
       return;
     }
 
-    setMovieLoading(true);
     const roots = getMovieRootCandidates(selectedRegion);
-    const unsubscribes = [];
-    let resolved = false;
+    let active = true;
 
-    const finalizeMovieList = (movieList) => {
-      if (resolved) return;
-      resolved = true;
-      setMovies(movieList);
-
-      if (!movieList.length) {
-        setSelectedMovie(null);
-        setDates([]);
-        setSelectedDate(null);
-        setMovieLoading(false);
-        return;
-      }
-
-      setSelectedMovie((prev) => (prev && movieList.some((movie) => movie.id === prev.id) ? prev : null));
-      setMovieLoading(false);
-    };
-
-    roots.forEach((rootPath) => {
-      const unsubscribe = onValue(ref(database, rootPath), (snapshot) => {
-        const raw = snapshot.val() || {};
-        if (!raw || Object.keys(raw).length === 0) return;
+    const loadMovies = async () => {
+      try {
+        const cacheKey = selectedRegion;
+        let raw = sessionMovieCache.get(cacheKey);
+        if (!raw) {
+          raw = await loadNodeWithRetry(roots);
+          if (raw && Object.keys(raw).length > 0) {
+            sessionMovieCache.set(cacheKey, raw);
+          }
+        }
+        if (!active) return;
 
         const movieList = Object.entries(raw)
-          .filter(([, value]) => value && typeof value === 'object')
+          .filter(([, value]) => value !== null && value !== undefined)
           .map(([id, value]) => ({
             id,
-            name: value.name || value.movie_name || value.title || prettifySlug(id),
+            name: value && typeof value === 'object' && value.name ? value.name : prettifySlug(id),
             raw: value
           }))
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        if (movieList.length > 0) {
-          finalizeMovieList(movieList);
+        setMovies(movieList);
+        setMovieError(null);
+        setSelectedMovie((prev) => (prev && movieList.some((movie) => movie.id === prev.id) ? prev : null));
+        if (!movieList.length) {
+          setDates([]);
+          setSelectedDate(null);
         }
-      }, (error) => {
+      } catch (error) {
+        if (!active) return;
         console.error('Error loading movies:', error);
-      });
-
-      unsubscribes.push(unsubscribe);
-    });
-
-    setTimeout(() => {
-      if (!resolved) {
-        finalizeMovieList([]);
+        setMovieError('Unable to load movies. Retrying may help.');
+      } finally {
+        if (active) setMovieLoading(false);
       }
-    }, 1500);
+    };
+
+    loadMovies();
 
     return () => {
-      unsubscribes.forEach((unsubscribe) => unsubscribe());
+      active = false;
     };
   }, [selectedRegion]);
 
   useEffect(() => {
     if (!selectedRegion || !selectedMovie) {
-      setDates([]);
-      setSelectedDate(null);
       return;
     }
 
-    setDateLoading(true);
     const roots = getMovieDatePathCandidates(selectedRegion, selectedMovie.id);
-    const unsubscribes = [];
-    let resolved = false;
+    let active = true;
 
-    const finalizeDates = (dateKeys) => {
-      if (resolved) return;
-      resolved = true;
-      setDates(dateKeys);
-
-      if (!dateKeys.length) {
-        setSelectedDate(null);
-        setDateLoading(false);
-        return;
-      }
-
-      setSelectedDate((prev) => (prev && dateKeys.includes(prev) ? prev : null));
-      setDateLoading(false);
-    };
-
-    roots.forEach((rootPath) => {
-      const unsubscribe = onValue(ref(database, rootPath), (snapshot) => {
-        const raw = snapshot.val() || {};
-        if (!raw || Object.keys(raw).length === 0) return;
+    const loadDates = async () => {
+      try {
+        const cacheKey = `${selectedRegion}/${selectedMovie.id}`;
+        let raw = sessionDateCache.get(cacheKey);
+        if (!raw) {
+          raw = await loadNodeWithRetry(roots);
+          if (raw && Object.keys(raw).length > 0) {
+            sessionDateCache.set(cacheKey, raw);
+          }
+        }
+        if (!active) return;
 
         const dateKeys = Object.keys(raw)
-          .filter((key) => key && typeof raw[key] === 'object')
+          .filter((key) => key && raw[key] !== null && raw[key] !== undefined)
           .sort()
           .reverse();
 
-        if (dateKeys.length > 0) {
-          finalizeDates(dateKeys);
-        }
-      }, (error) => {
+        setDates(dateKeys);
+        setDateError(null);
+        setSelectedDate((prev) => (prev && dateKeys.includes(prev) ? prev : null));
+      } catch (error) {
+        if (!active) return;
         console.error('Error loading dates:', error);
-      });
-
-      unsubscribes.push(unsubscribe);
-    });
-
-    setTimeout(() => {
-      if (!resolved) {
-        finalizeDates([]);
+        setDateError('Unable to load dates. Retrying may help.');
+      } finally {
+        if (active) setDateLoading(false);
       }
-    }, 1500);
+    };
+
+    loadDates();
 
     return () => {
-      unsubscribes.forEach((unsubscribe) => unsubscribe());
+      active = false;
     };
   }, [selectedMovie, selectedRegion]);
 
@@ -214,6 +241,11 @@ function App() {
     differences,
     includeDifferences
   } = selectedRegion === 'india' ? { loading: indiaDashboardData.loading, kpis: null, tables: null, metadata: { showDate: indiaDashboardData.showDate }, error: indiaDashboardData.error, rawRows: indiaDashboardData.rows, historyData: [], differences: null, includeDifferences: false } : dashboardData;
+
+  const dashboardIsCurrent = selectedRegion === 'india'
+    ? indiaDashboardData.movieName === selectedMovieId && indiaDashboardData.showDate === selectedDateValue
+    : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue;
+  const dashboardLoading = loading || !dashboardIsCurrent;
 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -415,14 +447,20 @@ function App() {
   const handleSelectRegion = (key) => {
     setSelectedRegion(key);
     setMovies([]);
+    setMovieError(null);
     setSelectedMovie(null);
     setDates([]);
+    setDateError(null);
     setSelectedDate(null);
     setMovieLoading(true);
     setDateLoading(false);
   };
 
   const renderDashboard = () => {
+    if (dashboardLoading) {
+      return <div style={{ color: '#f8fafc', padding: '20px' }}>Loading {regionTitle} data...</div>;
+    }
+
     if (selectedRegion === 'india') {
       return (
         <IndiaMovieDashboard
@@ -447,10 +485,6 @@ function App() {
 
     if (error) {
       return <div style={{ color: '#f87171', padding: '20px' }}>Error: {error}</div>;
-    }
-
-    if (loading) {
-      return <div style={{ color: '#f8fafc', padding: '20px' }}>Loading {regionTitle} data...</div>;
     }
 
     return (
@@ -600,6 +634,8 @@ function App() {
 
         {movieLoading ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>Loading movies...</div>
+        ) : movieError ? (
+          <div style={{ color: '#f87171', padding: '20px' }}>{movieError}</div>
         ) : movies.length === 0 ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>No movies found for {REGION_META[selectedRegion].label}.</div>
         ) : (
@@ -608,7 +644,11 @@ function App() {
               <button
                 key={movie.id}
                 type="button"
-                onClick={() => setSelectedMovie(movie)}
+                onClick={() => {
+                  setDateLoading(true);
+                  setDateError(null);
+                  setSelectedMovie(movie);
+                }}
                 className="selection-card"
                 style={{
                   background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.7))',
@@ -644,6 +684,8 @@ function App() {
 
         {dateLoading ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>Loading dates...</div>
+        ) : dateError ? (
+          <div style={{ color: '#f87171', padding: '20px' }}>{dateError}</div>
         ) : dates.length === 0 ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>No dates found for this movie.</div>
         ) : (

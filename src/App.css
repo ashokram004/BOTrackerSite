@@ -587,6 +587,26 @@ tr:hover td {
   opacity: 0.95;
 }
 
+.toggle-btn {
+  padding: 10px 22px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+  color: #e2e8f0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.toggle-btn:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+
 .india-header-row {
   display: flex;
   align-items: flex-end;

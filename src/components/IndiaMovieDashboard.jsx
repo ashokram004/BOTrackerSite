@@ -90,59 +90,6 @@ const getSourceClass = (source = 'Unknown') => {
   return 'src-dist';
 };
 
-const buildGroupSummary = (rows, field, includeGeo = false) => {
-  const map = {};
-
-  rows.forEach((row) => {
-    const rawKey = String(row[field] || 'Unknown');
-
-    if (
-      !rawKey ||
-      rawKey === 'Unknown' ||
-      rawKey.toLowerCase().includes('unknown')
-    ) {
-      return;
-    }
-
-    const key = rawKey;
-
-    if (!map[key]) {
-      map[key] = {
-        name: key,
-        shows: 0,
-        total: 0,
-        booked: 0,
-        gross: 0,
-        venueSet: new Set(),
-        state: row.state || 'Unknown',
-        city: row.city || 'Unknown'
-      };
-    }
-
-    map[key].shows += 1;
-    map[key].total += Number(row.total || 0);
-    map[key].booked += Number(row.booked || 0);
-    map[key].gross += Number(row.gross || 0);
-    map[key].venueSet.add(
-      `${row.theater || 'Unknown'}-${row.city || 'Unknown'}`
-    );
-  });
-
-  return Object.values(map)
-    .map((item) => ({
-      ...item,
-      venues: item.venueSet.size,
-      occupancy: item.total > 0 ? (item.booked / item.total) * 100 : 0,
-      ...(includeGeo
-        ? {
-            state: item.state,
-            city: item.city
-          }
-        : {})
-    }))
-    .sort((a, b) => b.gross - a.gross);
-};
-
 export const IndiaMovieDashboard = ({
   rows = [],
   movieName = 'Movie',
@@ -169,6 +116,7 @@ export const IndiaMovieDashboard = ({
   const [showAllStates, setShowAllStates] = useState(false);
   const [showAllCities, setShowAllCities] = useState(false);
   const [showAllTheatres, setShowAllTheatres] = useState(false);
+  const [showAllLedger, setShowAllLedger] = useState(false);
 
   const usableRows = useMemo(
     () =>
@@ -222,7 +170,7 @@ export const IndiaMovieDashboard = ({
       [
         ...new Set(
           usableRows
-            .map((r) => getTimeCategory(r.time || 'Unknown'))
+            .map((r) => r.timeCat || getTimeCategory(r.time || 'Unknown'))
             .filter(
               (value) => value && !value.toLowerCase().includes('unknown')
             )
@@ -299,14 +247,16 @@ export const IndiaMovieDashboard = ({
       const hasBms = !!bSid && String(bSid).toLowerCase() !== 'null' && String(bSid).toLowerCase() !== 'none';
       const hasDist = !!dSid && String(dSid).toLowerCase() !== 'null' && String(dSid).toLowerCase() !== 'none';
       
-      let sType = 'Unknown';
-      if (hasBms && hasDist) sType = 'Merged';
-      else if (hasBms && !hasDist) sType = 'BookMyShow';
-      else if (!hasBms && hasDist) sType = 'District';
-      else sType = row.sourceType || row.source || rawData.source || 'Unknown';
+      const sType = hasBms && hasDist
+        ? 'Merged'
+        : hasBms
+          ? 'BookMyShow'
+          : hasDist
+            ? 'District'
+            : row.sourceType || row.source || rawData.source || 'Unknown';
 
       // Override the old sourceType with our accurate calculated one
-      const updatedRow = { ...row, sourceType: sType };
+      const updatedRow = row.sourceType === sType ? row : { ...row, sourceType: sType };
 
       // --- FILTERING ---
       if (filters.state !== 'ALL' && updatedRow.state !== filters.state) continue;
@@ -354,7 +304,7 @@ export const IndiaMovieDashboard = ({
       addToMap('format', updatedRow.format);
       addToMap('language', updatedRow.language);
       addToMap('timeCat', updatedRow.timeCat); 
-      addToMap('occTier', updatedRow.occTier);
+      addToMap('occTier', updatedRow.occTier || getOccTier(updatedRow.occ));
     }
 
     // 3. Format maps into sorted arrays for the tables
@@ -383,10 +333,19 @@ export const IndiaMovieDashboard = ({
 
   // Destructure for the JSX to use
   const { 
-    filteredRows, totalGross, totalBooked, totalTickets, totalVenues, occupancy, 
+    filteredRows, totalGross, totalBooked, totalVenues, occupancy,
     sourceBuckets, stateSummary, citySummary, theatreSummary, formatSummary, 
     languageSummary, timeSummary, occTierSummary 
   } = stats;
+
+  const sortedLedgerRows = useMemo(
+    () => [...filteredRows].sort((a, b) => Number(b.gross || 0) - Number(a.gross || 0)),
+    [filteredRows]
+  );
+
+  const visibleLedgerRows = showAllLedger
+    ? sortedLedgerRows
+    : sortedLedgerRows.slice(0, 20);
 
   const summaryCards = [
     {
@@ -437,7 +396,7 @@ export const IndiaMovieDashboard = ({
     data,
     showAll,
     setShowAll,
-    limit = 10
+    limit = 20
   ) => (
     <div className="summary-section" key={title}>
       <h2>{title}</h2>
@@ -880,7 +839,7 @@ export const IndiaMovieDashboard = ({
             stateSummary,
             showAllStates,
             setShowAllStates,
-            10
+            20
           )}
 
           {renderTable(
@@ -888,7 +847,7 @@ export const IndiaMovieDashboard = ({
             citySummary,
             showAllCities,
             setShowAllCities,
-            10
+            20
           )}
         </div>
 
@@ -935,7 +894,7 @@ export const IndiaMovieDashboard = ({
               <tbody>
                 {(showAllTheatres
                   ? theatreSummary
-                  : theatreSummary.slice(0, 25)
+                  : theatreSummary.slice(0, 20)
                 ).map((row) => (
                   <tr
                     key={`${row.name}-${row.city}`}
@@ -998,7 +957,7 @@ export const IndiaMovieDashboard = ({
             </table>
           </div>
 
-          {theatreSummary.length > 25 && (
+          {theatreSummary.length > 20 && (
             <div style={{ textAlign: 'center', paddingTop: '16px' }}>
               <button
                 onClick={() => setShowAllTheatres((v) => !v)}
@@ -1033,14 +992,14 @@ export const IndiaMovieDashboard = ({
                 }}
               >
                 {showAllTheatres
-                  ? '↑ Show Top 25'
-                  : `↓ Show Remaining ${theatreSummary.length - 25}`}
+                  ? 'Show Top 20'
+                  : `Show Remaining ${theatreSummary.length - 20}`}
               </button>
             </div>
           )}
         </div>
 
-        {/* <div
+        <div
           className="summary-section"
           style={{
             marginBottom: '0'
@@ -1082,15 +1041,9 @@ export const IndiaMovieDashboard = ({
               </thead>
 
               <tbody>
-                {[...(filteredRows || [])]
-                  .sort(
-                    (a, b) =>
-                      Number(b.gross || 0) -
-                      Number(a.gross || 0)
-                  )
-                  .map((row, idx) => (
+                {visibleLedgerRows.map((row, idx) => (
                     <tr
-                      key={`${row.id || idx}`}
+                      key={`${row.id || 'show'}-${idx}`}
                     >
                       <td
                         className={getSourceClass(
@@ -1193,7 +1146,22 @@ export const IndiaMovieDashboard = ({
               </tbody>
             </table>
           </div>
-        </div> */}
+
+          {sortedLedgerRows.length > 20 && (
+            <div style={{ textAlign: 'center', paddingTop: '16px' }}>
+              <button
+                type="button"
+                onClick={() => setShowAllLedger((value) => !value)}
+                className="toggle-btn"
+              >
+                {showAllLedger
+                  ? 'Show Top 20'
+                  : `Show Remaining ${(sortedLedgerRows.length - 20).toLocaleString()} Shows`}
+              </button>
+            </div>
+          )}
+
+        </div>
 
         <div className="footer">
           Wknd Cinema • BMS + District Analytics •
