@@ -620,7 +620,7 @@ function App() {
     return (
       <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px', width: '100%' }}>
         <div style={{ marginBottom: '30px', textAlign: 'center' }}>
-          <p style={{ color: '#f58320', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+          <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
           <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Box-Office Tracking Portal</h1>
           <p style={{ color: '#94a3b8', marginTop: '10px' }}>Choose a market</p>
         </div>
@@ -665,7 +665,7 @@ function App() {
             navigate(`/`);
           }} className="toggle-filter-btn">Home</button>
           <div>
-            <p style={{ color: '#f58320', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
             <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Market</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{REGION_META[selectedRegion].label}</h2>
@@ -727,7 +727,7 @@ function App() {
             navigate(`/`);
           }} className="toggle-filter-btn">Home</button>
           <div>
-            <p style={{ color: '#f58320', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
             <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Movie</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{selectedMovie.name}</h2>
