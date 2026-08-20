@@ -46,6 +46,26 @@ const prettifySlug = (value) =>
     .trim()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const getRouteState = (pathname) => {
+  const segments = pathname.split('/').filter(Boolean).map((segment) => decodeURIComponent(segment));
+  const region = segments[0] === 'usa' || segments[0] === 'india' ? segments[0] : null;
+  const movieSlug = region && segments[1] ? segments[1] : null;
+  const showDate = movieSlug && segments[2] ? segments[2] : null;
+
+  return {
+    region,
+    movie: movieSlug ? { id: movieSlug, name: prettifySlug(movieSlug) } : null,
+    date: showDate
+  };
+};
+
+const getRoutePath = (region, movie, showDate) => {
+  if (!region) return '/';
+  if (!movie) return `/${region}`;
+  if (!showDate) return `/${region}/${encodeURIComponent(movie.id)}`;
+  return `/${region}/${encodeURIComponent(movie.id)}/${encodeURIComponent(showDate)}`;
+};
+
 const sessionMovieCache = new Map();
 const sessionDateCache = new Map();
 
@@ -100,11 +120,12 @@ const loadNodeWithRetry = async (roots, attempts = 4) => {
 };
 
 function App() {
-  const [selectedRegion, setSelectedRegion] = useState(null);
+  const initialRoute = getRouteState(window.location.pathname);
+  const [selectedRegion, setSelectedRegion] = useState(initialRoute.region);
   const [movies, setMovies] = useState([]);
-  const [selectedMovie, setSelectedMovie] = useState(null);
+  const [selectedMovie, setSelectedMovie] = useState(initialRoute.movie);
   const [dates, setDates] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(initialRoute.date);
   const [movieLoading, setMovieLoading] = useState(false);
   const [movieError, setMovieError] = useState(null);
   const [dateLoading, setDateLoading] = useState(false);
@@ -112,6 +133,29 @@ function App() {
   const [diffMode, setDiffMode] = useState('hourly');
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = getRouteState(window.location.pathname);
+      setSelectedRegion(route.region);
+      setSelectedMovie(route.movie);
+      setSelectedDate(route.date);
+      setMovies([]);
+      setDates([]);
+      setMovieError(null);
+      setDateError(null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const routePath = getRoutePath(selectedRegion, selectedMovie, selectedDate);
+    if (window.location.pathname !== routePath) {
+      window.history.replaceState(null, '', routePath);
+    }
+  }, [selectedRegion, selectedMovie, selectedDate]);
 
   useEffect(() => {
     if (!selectedRegion) {
