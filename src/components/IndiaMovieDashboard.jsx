@@ -511,7 +511,7 @@ export const IndiaMovieDashboard = ({
     <div id="app">
       <div className="container">
         <DashboardHeader
-          marketLabel="India Box Office Tracking"
+          marketLabel={<><span className="dashboard-brand">WkndCinemas</span> India Box Office Tracking</>}
           movieName={movieName}
           showDate={showDate}
           lastUpdated={lastUpdated}

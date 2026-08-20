@@ -10,6 +10,7 @@ import { generateImageReport } from './utils/imageGenerator';
 import { PacingChart } from './components/PacingChart';
 import { IndiaMovieDashboard } from './components/IndiaMovieDashboard';
 import { DashboardHeader } from './components/DashboardHeader';
+import { LoadingState } from './components/LoadingState';
 import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
 import './App.css';
@@ -476,7 +477,7 @@ function App() {
 
   const renderDashboard = () => {
     if (dashboardLoading) {
-      return <div style={{ color: '#f8fafc', padding: '20px' }}>Loading {regionTitle} data...</div>;
+      return <LoadingState label={`Loading ${regionTitle} data`} />;
     }
 
     if (selectedRegion === 'india') {
@@ -514,7 +515,7 @@ function App() {
       <div id="app">
         <div className="container">
           <DashboardHeader
-            marketLabel={selectedRegion ? `${REGION_META[selectedRegion]?.label} Box Office Tracking` : 'Box Office Tracking'}
+            marketLabel={selectedRegion ? <><span className="dashboard-brand">WkndCinemas</span> {REGION_META[selectedRegion]?.label} Box Office Tracking</> : 'Box Office Tracking'}
             movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
             showDate={metadata?.showDate || selectedDateValue}
             lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
@@ -619,8 +620,9 @@ function App() {
     return (
       <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px', width: '100%' }}>
         <div style={{ marginBottom: '30px', textAlign: 'center' }}>
-          <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Box Office</p>
-          <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Choose a market</h1>
+          <p style={{ color: '#f58320', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+          <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Box-Office Tracking Portal</h1>
+          <p style={{ color: '#94a3b8', marginTop: '10px' }}>Choose a market</p>
         </div>
 
         <div className="dashboard-row" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', width: '100%', maxWidth: '100%' }}>
@@ -655,19 +657,27 @@ function App() {
   if (!selectedMovie) {
     return (
       <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', textAlign: 'center' }}>
+          <button style={{ position: 'absolute', left: 0 }} onClick={() => {
+            setSelectedMovie(null);
+            setSelectedRegion(null);
+            setSelectedDate(null);
+            navigate(`/`);
+          }} className="toggle-filter-btn">Home</button>
           <div>
+            <p style={{ color: '#f58320', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+            <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Market</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{REGION_META[selectedRegion].label}</h2>
           </div>
-          <button onClick={() => {
+          <button style={{ position: 'absolute', right: 0 }} onClick={() => {
             setSelectedRegion(null);
             navigate('/');
           }} className="toggle-filter-btn">Back</button>
         </div>
 
         {movieLoading ? (
-          <div style={{ color: '#f8fafc', padding: '20px' }}>Loading movies...</div>
+          <LoadingState label="Loading movies" />
         ) : movieError ? (
           <div style={{ color: '#f87171', padding: '20px' }}>{movieError}</div>
         ) : movies.length === 0 ? (
@@ -709,19 +719,27 @@ function App() {
   if (!selectedDate) {
     return (
       <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', textAlign: 'center' }}>
+          <button style={{ position: 'absolute', left: 0 }} onClick={() => {
+            setSelectedMovie(null);
+            setSelectedRegion(null);
+            setSelectedDate(null);
+            navigate(`/`);
+          }} className="toggle-filter-btn">Home</button>
           <div>
+            <p style={{ color: '#f58320', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+            <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Movie</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{selectedMovie.name}</h2>
           </div>
-          <button onClick={() => {
+          <button style={{ position: 'absolute', right: 0 }} onClick={() => {
             setSelectedMovie(null);
             navigate(`/${selectedRegion}`);
           }} className="toggle-filter-btn">Back</button>
         </div>
 
         {dateLoading ? (
-          <div style={{ color: '#f8fafc', padding: '20px' }}>Loading dates...</div>
+          <LoadingState label="Loading dates" />
         ) : dateError ? (
           <div style={{ color: '#f87171', padding: '20px' }}>{dateError}</div>
         ) : dates.length === 0 ? (

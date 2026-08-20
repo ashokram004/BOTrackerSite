@@ -260,6 +260,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     dailySnapshot: null,
     hourlySnapshot: null,
     historyDataRaw: null,
+    dailySnapshotReady: false,
+    hourlySnapshotReady: false,
     lastUpdated: 'N/A',
     growthSinceDaily: 'N/A',
     growthSinceHourly: 'N/A'
@@ -370,6 +372,10 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     }
 
     const safeCurrentData = normalizeFirebasePayload(currentData);
+    const comparisonReady = diffMode === 'hourly'
+      ? refs.current.hourlySnapshotReady
+      : refs.current.dailySnapshotReady;
+    if (!comparisonReady) return;
     const safeDailySnapshot = normalizeFirebasePayload(dailySnapshot || safeCurrentData);
     const safeHourlySnapshot = normalizeFirebasePayload(hourlySnapshot || safeCurrentData);
 
@@ -851,6 +857,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         dailySnapshot: null,
         hourlySnapshot: null,
         historyDataRaw: null,
+        dailySnapshotReady: false,
+        hourlySnapshotReady: false,
         lastUpdated: 'N/A',
         growthSinceDaily: 'N/A',
         growthSinceHourly: 'N/A'
@@ -874,26 +882,24 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       dailySnapshot: null,
       hourlySnapshot: null,
       historyDataRaw: null,
+      dailySnapshotReady: false,
+      hourlySnapshotReady: false,
       lastUpdated: 'N/A',
       growthSinceDaily: 'N/A',
       growthSinceHourly: 'N/A'
     };
 
     const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}`;
+    let cachedFrameId;
+    let cachedTimerId;
     if (refreshKey > 0) sessionDashboardCache.delete(cacheKey);
     if (sessionDashboardCache.has(cacheKey)) {
       const cachedData = sessionDashboardCache.get(cacheKey);
-      let timerId;
-      const frameId = requestAnimationFrame(() => {
-        timerId = setTimeout(() => {
+      cachedFrameId = requestAnimationFrame(() => {
+        cachedTimerId = setTimeout(() => {
           if (requestIdRef.current === requestId) setData(cachedData);
         }, 0);
       });
-      return () => {
-        if (requestIdRef.current === requestId) requestIdRef.current += 1;
-        cancelAnimationFrame(frameId);
-        clearTimeout(timerId);
-      };
     }
 
     const paths = getMovieDateCandidates(region, movieSlug);
@@ -931,9 +937,16 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
       const unsubSnapshot = onValue(snapshotRef, (snapshot) => {
         if (requestIdRef.current !== requestId) return;
-        if (!snapshot.exists()) return;
+        refs.current.dailySnapshotReady = true;
+        if (!snapshot.exists()) {
+          process();
+          return;
+        }
         const payload = normalizeFirebasePayload(snapshot.val());
-        if (!payload || (!payload.data && !payload.last_snapshot)) return;
+        if (!payload || (!payload.data && !payload.last_snapshot)) {
+          process();
+          return;
+        }
 
         refs.current.dailySnapshot = payload;
         if (refs.current.dailySnapshot?.timestamp) {
@@ -944,9 +957,16 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
       const unsubHourlySnapshot = onValue(hourlySnapshotRef, (snapshot) => {
         if (requestIdRef.current !== requestId) return;
-        if (!snapshot.exists()) return;
+        refs.current.hourlySnapshotReady = true;
+        if (!snapshot.exists()) {
+          process();
+          return;
+        }
         const payload = normalizeFirebasePayload(snapshot.val());
-        if (!payload || (!payload.data && !payload.previous_run_snapshot)) return;
+        if (!payload || (!payload.data && !payload.previous_run_snapshot)) {
+          process();
+          return;
+        }
 
         refs.current.hourlySnapshot = payload;
         if (refs.current.hourlySnapshot?.timestamp) {
@@ -972,6 +992,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
     return () => {
       if (requestIdRef.current === requestId) requestIdRef.current += 1;
+      cancelAnimationFrame(cachedFrameId);
+      clearTimeout(cachedTimerId);
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
   }, [enabled, movieSlug, process, region, showDate, refreshKey]);

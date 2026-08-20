@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { get, ref } from 'firebase/database';
+import { onValue, ref } from 'firebase/database';
 import { database } from '../firebaseConfig';
 
 const toNumber = (value) => {
@@ -213,19 +213,15 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     let active = true;
 
     if (refreshKey > 0) sessionIndiaDashboardCache.delete(cacheKey);
+    let frameId;
+    let timerId;
     if (sessionIndiaDashboardCache.has(cacheKey)) {
       const cachedData = sessionIndiaDashboardCache.get(cacheKey);
-      let timerId;
-      const frameId = requestAnimationFrame(() => {
+      frameId = requestAnimationFrame(() => {
         timerId = setTimeout(() => {
           if (active) setData(cachedData);
         }, 100);
       });
-      return () => {
-        active = false;
-        cancelAnimationFrame(frameId);
-        clearTimeout(timerId);
-      };
     }
 
     const finalize = (rows, error = null, lastUpdatedValue = null) => {
@@ -242,26 +238,24 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       setData(nextData);
     };
 
-    const loadDashboard = async () => {
-      try {
-        const snapshot = await get(ref(database, candidates[0]));
-        if (!snapshot.exists()) {
-          finalize([]);
-          return;
-        }
-
-        const flattened = getRowsFromPayload(snapshot.val());
-        const rows = flattened.rows;
-        finalize(rows, null, flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null);
-      } catch (error) {
-        finalize([], error.message);
+    const unsubscribe = onValue(ref(database, candidates[0]), (snapshot) => {
+      if (!snapshot.exists()) {
+        finalize([]);
+        return;
       }
-    };
 
-    loadDashboard();
+      const flattened = getRowsFromPayload(snapshot.val());
+      const rows = flattened.rows;
+      finalize(rows, null, flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null);
+    }, (error) => {
+      finalize([], error.message);
+    });
 
     return () => {
       active = false;
+      cancelAnimationFrame(frameId);
+      clearTimeout(timerId);
+      unsubscribe();
     };
   }, [enabled, movieSlug, showDate, refreshKey]);
 
