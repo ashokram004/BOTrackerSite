@@ -395,7 +395,7 @@ function App() {
     if (isGeneratingImg) return;
     setIsGeneratingImg(true);
     try {
-      const dataUrl = await generateImageReport(kpis, tables, metadata);
+      const dataUrl = await generateImageReport(kpis, tables, metadata, selectedMovie?.name);
       const a = document.createElement('a');
       a.href = dataUrl;
       a.download = `BoxOffice_${selectedRegion || 'usa'}_${diffMode}_report.png`;

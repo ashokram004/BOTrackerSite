@@ -1,4 +1,4 @@
-export const generateImageReport = async (kpis, tables, metadata) => {
+export const generateImageReport = async (kpis, tables, metadata, movieName) => {
   return new Promise((resolve) => {
     const W = 3200;
     const PAD = 80;
@@ -80,7 +80,7 @@ export const generateImageReport = async (kpis, tables, metadata) => {
     ctx.textBaseline = 'top';
     ctx.fillStyle = TEXT_BRIGHT;
     ctx.font = 'bold 64px Arial, Helvetica, sans-serif';
-    ctx.fillText("Peddi", PAD, PAD);
+    ctx.fillText(movieName?.toUpperCase() || "Movie", PAD, PAD);
 
     ctx.fillStyle = ACCENT;
     ctx.font = '28px Arial, Helvetica, sans-serif';
