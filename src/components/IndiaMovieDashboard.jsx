@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { DashboardHeader } from './DashboardHeader';
+import { generateIndiaImageReport } from '../utils/imageGenerator';
 
 const formatRupee = (value) => {
   const n = Number(value || 0);
@@ -112,6 +113,7 @@ export const IndiaMovieDashboard = ({
   });
 
   const [showFilters, setShowFilters] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // State / City / Theatre expansion states
   const [showAllStates, setShowAllStates] = useState(false);
@@ -347,7 +349,7 @@ export const IndiaMovieDashboard = ({
 
   // Destructure for the JSX to use
   const { 
-    filteredRows, totalGross, totalBooked, totalVenues, fastFillingShows, houseFullShows, occupancy,
+    filteredRows, totalGross, totalBooked, totalTickets, totalVenues, fastFillingShows, houseFullShows, occupancy,
     sourceBuckets, stateSummary, citySummary, theatreSummary, formatSummary, 
     languageSummary, timeSummary, occTierSummary 
   } = stats;
@@ -387,6 +389,41 @@ export const IndiaMovieDashboard = ({
       value: `${formatNumber(fastFillingShows)} / ${formatNumber(houseFullShows)}`
     }
   ];
+
+  const handleExportImage = async () => {
+    if (isGeneratingImage) return;
+
+    setIsGeneratingImage(true);
+    try {
+      const dataUrl = await generateIndiaImageReport({
+        movieName,
+        showDate,
+        totalGross,
+        totalBooked,
+        totalVenues,
+        totalShows: filteredRows.length,
+        totalTickets,
+        occupancy,
+        houseFullShows,
+        fastFillingShows,
+        languages: languageSummary,
+        timeCats: timeSummary,
+        states: stateSummary,
+        cities: citySummary
+      });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `BoxOffice_India_${movieName.replace(/[^a-z0-9]+/gi, '_')}_${showDate}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error generating India image:', error);
+      alert('Failed to generate image.');
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
 
   const renderSummaryCard = (title, value) => (
     <div key={title} className="kpi-card">
@@ -529,7 +566,7 @@ export const IndiaMovieDashboard = ({
     <div id="app">
       <div className="container">
         <DashboardHeader
-          marketLabel={<><span className="dashboard-brand">WkndCinemas</span> India Box Office Tracking</>}
+          marketLabel={<><span className="dashboard-brand">TheWkndCinema</span> India Box Office Tracking</>}
           movieName={movieName}
           showDate={showDate}
           lastUpdated={lastUpdated}
@@ -563,6 +600,12 @@ export const IndiaMovieDashboard = ({
               onClick: () =>
                 setShowFilters((v) => !v),
               variant: 'primary'
+            },
+            {
+              label: isGeneratingImage ? 'Generating...' : 'Export Image',
+              onClick: handleExportImage,
+              variant: 'primary',
+              disabled: isGeneratingImage
             }
           ]}
         />
@@ -1217,7 +1260,7 @@ export const IndiaMovieDashboard = ({
         </div>
 
         <div className="footer">
-          Wknd Cinema • BMS + District Analytics •
+          @TheWkndCinema • BookMyShow + District Analytics •
           Generated{' '}
           {new Date().toLocaleString('en-IN', {
             timeZone: 'Asia/Kolkata',

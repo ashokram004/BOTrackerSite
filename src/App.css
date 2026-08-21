@@ -904,18 +904,18 @@ tr:hover td {
 /* Refined report shell */
 :root {
   --bg-color: #030914;
-  --surface: rgba(13, 27, 45, 0.86);
-  --surface-raised: rgba(18, 36, 57, 0.94);
-  --surface-soft: rgba(255, 255, 255, 0.045);
+  --surface: rgba(7, 17, 30, 0.94);
+  --surface-raised: rgba(10, 23, 39, 0.96);
+  --surface-soft: rgba(255, 255, 255, 0.028);
   --text-main: #f4f7fb;
   --text-muted: #8ea0b7;
   --text-soft: #b8c5d5;
   --primary: #f59e0b;
   --accent: #38bdf8;
   --glass-bg: var(--surface);
-  --glass-border: rgba(148, 163, 184, 0.2);
-  --glass-highlight: rgba(255, 255, 255, 0.1);
-  --shadow-panel: 0 18px 50px rgba(2, 8, 23, 0.28);
+  --glass-border: rgba(82, 116, 148, 0.22);
+  --glass-highlight: rgba(148, 190, 220, 0.07);
+  --shadow-panel: 0 18px 50px rgba(0, 2, 8, 0.48);
   --radius-panel: 14px;
 }
 
@@ -927,9 +927,9 @@ body {
   min-width: 320px;
   padding: 0;
   background:
-    linear-gradient(135deg, rgba(30, 91, 145, 0.16), transparent 34%),
-    radial-gradient(circle at 88% 12%, rgba(14, 116, 184, 0.12), transparent 28%),
-    radial-gradient(circle at 12% 88%, rgba(15, 64, 108, 0.12), transparent 32%),
+    linear-gradient(135deg, rgba(20, 62, 101, 0.11), transparent 34%),
+    radial-gradient(circle at 88% 12%, rgba(14, 82, 132, 0.08), transparent 28%),
+    radial-gradient(circle at 12% 88%, rgba(8, 42, 75, 0.08), transparent 32%),
     #030914;
   color: var(--text-main);
 }
@@ -948,6 +948,12 @@ select {
   padding: clamp(22px, 4vw, 52px) clamp(14px, 3vw, 42px);
 }
 
+@media (min-width: 781px) {
+  #app {
+    padding-top: 30px;
+  }
+}
+
 .container {
   width: min(100%, 1540px);
   margin: 0 auto;
@@ -957,7 +963,7 @@ select {
   gap: 22px;
   margin-bottom: 26px;
   padding: 0 0 22px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  border-bottom: 1px solid rgba(82, 116, 148, 0.2);
 }
 
 .dashboard-header-main {
@@ -981,9 +987,9 @@ select {
 }
 
 .dashboard-header-meta-group:only-child {
-  align-items: flex-start;
-  justify-self: start;
-  justify-content: flex-start;
+  align-items: flex-end;
+  justify-self: end;
+  justify-content: flex-end;
   width: max-content;
   max-width: 100%;
   text-align: left !important;
@@ -1040,9 +1046,9 @@ select {
 
 .dashboard-action-btn.secondary,
 .toggle-btn {
-  background: rgba(255, 255, 255, 0.045);
-  border-color: rgba(148, 163, 184, 0.28);
-  color: var(--text-soft);
+  background: rgba(5, 14, 26, 0.82);
+  border-color: rgba(82, 132, 170, 0.34);
+  color: #c2d0dc;
 }
 
 .dashboard-action-btn.primary,
@@ -1052,11 +1058,37 @@ select {
   color: #1c1304;
 }
 
+.dashboard-action-btn.accent {
+  background: rgba(8, 54, 82, 0.72);
+  border-color: rgba(56, 189, 248, 0.58);
+  color: #b9e9ff;
+}
+
+.dashboard-action-btn.accent:hover {
+  background: rgba(10, 79, 116, 0.86);
+  border-color: rgba(125, 211, 252, 0.9);
+  color: #e0f5ff;
+}
+
 .dashboard-action-btn:hover,
 .toggle-filter-btn:hover,
 .toggle-btn:hover {
   transform: translateY(-1px);
   border-color: rgba(245, 158, 11, 0.72);
+}
+
+.dashboard-action-btn.secondary:hover,
+.toggle-btn:hover {
+  background: rgba(17, 38, 59, 0.92);
+  border-color: rgba(92, 169, 216, 0.7);
+  color: var(--text-main);
+}
+
+.dashboard-action-btn:focus-visible,
+.toggle-filter-btn:focus-visible,
+.toggle-btn:focus-visible {
+  outline: 2px solid rgba(56, 189, 248, 0.8);
+  outline-offset: 2px;
 }
 
 .kpi-grid {
@@ -1069,9 +1101,9 @@ select {
 .summary-section,
 .filter-panel {
   min-width: 0;
-  background: linear-gradient(145deg, rgba(20, 42, 66, 0.9), rgba(10, 24, 41, 0.88));
+  background: linear-gradient(145deg, rgba(9, 23, 39, 0.96), rgba(4, 12, 23, 0.98));
   border: 1px solid var(--glass-border);
-  border-top-color: rgba(255, 255, 255, 0.14);
+  border-top-color: rgba(112, 155, 190, 0.12);
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-panel);
 }
@@ -1180,6 +1212,77 @@ table {
   table-layout: auto;
 }
 
+@media (min-width: 781px) {
+  .table-scroll-us {
+    overflow-x: hidden;
+  }
+
+  .table-scroll-us table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .table-scroll-us th,
+  .table-scroll-us td {
+    max-width: 0;
+    padding: 10px 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table-scroll-us th:first-child,
+  .table-scroll-us td:first-child {
+    width: 40%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .table-scroll-us th:not(:first-child),
+  .table-scroll-us td:not(:first-child) {
+    width: 12%;
+  }
+
+  .table-scroll-difference {
+    overflow-x: hidden;
+  }
+
+  .table-scroll-difference table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .table-scroll-difference th,
+  .table-scroll-difference td {
+    max-width: 0;
+    padding: 10px 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .table-scroll-difference th:first-child,
+  .table-scroll-difference td:first-child {
+    width: 31%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .table-scroll-difference th:nth-child(2),
+  .table-scroll-difference td:nth-child(2),
+  .table-scroll-difference th:nth-child(3),
+  .table-scroll-difference td:nth-child(3),
+  .table-scroll-difference th:nth-child(4),
+  .table-scroll-difference td:nth-child(4) {
+    width: 14%;
+  }
+
+  .table-scroll-difference th:nth-last-child(-n + 2),
+  .table-scroll-difference td:nth-last-child(-n + 2) {
+    width: 13.5%;
+  }
+}
+
 th,
 td {
   padding: 12px 16px;
@@ -1188,7 +1291,7 @@ td {
 }
 
 th {
-  background: rgba(5, 15, 28, 0.78);
+  background: rgba(1, 7, 15, 0.94);
   color: #8ea0b7;
   font-size: 9px;
   letter-spacing: 0.1em;
@@ -1223,7 +1326,7 @@ tr:hover td {
   min-height: 40px;
   padding: 9px 11px;
   border-radius: 8px;
-  background: rgba(3, 12, 24, 0.58);
+  background: rgba(2, 9, 18, 0.86);
   border-color: rgba(148, 163, 184, 0.25);
   color: var(--text-main);
   font-size: 12px;
@@ -1271,13 +1374,22 @@ tr:hover td {
   }
 
   .dashboard-header-meta-group:last-child:not(:only-child) {
-    align-items: flex-end;
-    text-align: right;
+    align-items: flex-start;
+    text-align: left;
   }
 
   .dashboard-header-right-actions {
     margin-left: 0;
     justify-content: flex-start;
+  }
+
+  .dashboard-header-meta-group:only-child {
+    align-items: flex-start;
+    justify-self: start;
+    justify-content: flex-start;
+    width: max-content;
+    max-width: 100%;
+    text-align: left !important;
   }
 
   .kpi-grid,
@@ -1427,6 +1539,19 @@ tr:hover td {
     grid-column: span 2;
   }
 
+  .dashboard-header-actions > .dashboard-header-right-actions:has(> :nth-child(2)):not(:has(> :nth-child(3))) {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .dashboard-header-actions > .dashboard-header-right-actions:has(> :nth-child(2)):not(:has(> :nth-child(3))) .dashboard-action-btn {
+    grid-column: span 2;
+    width: auto;
+  }
+
   .summary-section h2 {
     padding-inline: 14px;
   }
@@ -1452,7 +1577,7 @@ tr:hover td {
   margin-bottom: 30px;
   border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 18px;
-  background: linear-gradient(145deg, rgba(20, 42, 66, 0.92), rgba(8, 21, 36, 0.9));
+  background: linear-gradient(145deg, rgba(9, 23, 39, 0.97), rgba(3, 11, 21, 0.98));
   box-shadow: var(--shadow-panel);
   text-align: center;
 }
@@ -1480,7 +1605,19 @@ tr:hover td {
   width: 100%;
   max-width: 720px;
   justify-items: center;
-  gap: 4px;
+  gap: 2px;
+}
+
+.selection-header-content h1 {
+  margin-bottom: 6px !important;
+}
+
+.selection-header-content p:nth-of-type(2) {
+  margin: 0 !important;
+}
+
+.selection-header-content h2 {
+  margin-top: 0 !important;
 }
 
 .selection-nav-row {
@@ -1547,7 +1684,7 @@ tr:hover td {
 
 .selection-card {
   min-height: 150px;
-  background: linear-gradient(145deg, rgba(20, 42, 66, 0.92), rgba(10, 24, 41, 0.9)) !important;
+  background: linear-gradient(145deg, rgba(9, 23, 39, 0.97), rgba(3, 11, 21, 0.98)) !important;
   border: 1px solid rgba(148, 163, 184, 0.22) !important;
   border-radius: var(--radius-panel) !important;
   box-shadow: var(--shadow-panel) !important;

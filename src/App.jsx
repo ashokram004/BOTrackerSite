@@ -515,7 +515,7 @@ function App() {
       <div id="app">
         <div className="container">
           <DashboardHeader
-            marketLabel={selectedRegion ? <><span className="dashboard-brand">WkndCinemas</span> {REGION_META[selectedRegion]?.label} Box Office Tracking</> : 'Box Office Tracking'}
+            marketLabel={selectedRegion ? <><span className="dashboard-brand">TheWkndCinema</span> {REGION_META[selectedRegion]?.label} Box Office Tracking</> : 'Box Office Tracking'}
             movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
             showDate={metadata?.showDate || selectedDateValue}
             lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
@@ -540,7 +540,7 @@ function App() {
             rightActions={[
               { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'primary' },
               { label: diffMode === 'daily' ? 'Viewing: Daily Growth' : 'Viewing: Hourly Growth', onClick: () => setDiffMode((m) => (m === 'daily' ? 'hourly' : 'daily')), variant: 'secondary' },
-              { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'secondary', disabled: isGeneratingImg }
+              { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'primary', disabled: isGeneratingImg }
             ]}
           />
 
@@ -609,7 +609,7 @@ function App() {
           )}
 
           <div className="footer">
-            @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Firebase
+            @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Fandango
           </div>
         </div>
       </div>
@@ -620,7 +620,7 @@ function App() {
     return (
       <div className="container selection-page">
         <div className="selection-intro">
-          <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+          <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
           <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Box-Office Tracking Portal</h1>
           <p style={{ color: '#94a3b8', marginTop: '10px' }}>Choose a market</p>
         </div>
@@ -649,7 +649,7 @@ function App() {
       <div className="container selection-page">
         <div className="selection-header">
           <div className="selection-header-content">
-            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
             <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Market</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{REGION_META[selectedRegion].label}</h2>
@@ -704,7 +704,7 @@ function App() {
       <div className="container selection-page">
         <div className="selection-header">
           <div className="selection-header-content">
-            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
+            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
             <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Movie</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{selectedMovie.name}</h2>

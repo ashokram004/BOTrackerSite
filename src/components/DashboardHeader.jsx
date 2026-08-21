@@ -6,7 +6,9 @@ export const DashboardHeader = ({
   leftActions = [],
   rightActions = []
 }) => {
-  const [updatedValue, growthValue] = String(lastUpdated || '').split(' • Growth since ');
+  let [updatedValue, growthValue] = String(lastUpdated || '').split(' • Growth since ');
+  updatedValue = updatedValue.toUpperCase() + " IST";
+  growthValue = growthValue ? growthValue.toUpperCase() : '';
   const hasGrowthValue = Boolean(
     growthValue &&
     !/^(n\/a|na|null|undefined|-)(\s|$)/i.test(growthValue.trim())
@@ -45,7 +47,7 @@ export const DashboardHeader = ({
             <button
               key={action.key || `${action.label}-${index}`}
               type="button"
-              className={action.variant === 'primary' ? 'dashboard-action-btn primary' : 'dashboard-action-btn secondary'}
+              className={`dashboard-action-btn ${action.variant === 'primary' ? 'primary' : action.variant === 'accent' ? 'accent' : 'secondary'}`}
               onClick={action.onClick}
               style={action.style}
               disabled={action.disabled}
@@ -60,7 +62,7 @@ export const DashboardHeader = ({
             <button
               key={action.key || `${action.label}-${index}`}
               type="button"
-              className={action.variant === 'primary' ? 'dashboard-action-btn primary' : 'dashboard-action-btn secondary'}
+              className={`dashboard-action-btn ${action.variant === 'primary' ? 'primary' : action.variant === 'accent' ? 'accent' : 'secondary'}`}
               onClick={action.onClick}
               style={action.style}
               disabled={action.disabled}
