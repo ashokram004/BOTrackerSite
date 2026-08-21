@@ -6,6 +6,12 @@ export const DashboardHeader = ({
   leftActions = [],
   rightActions = []
 }) => {
+  const [updatedValue, growthValue] = String(lastUpdated || '').split(' • Growth since ');
+  const hasGrowthValue = Boolean(
+    growthValue &&
+    !/^(n\/a|na|null|undefined|-)(\s|$)/i.test(growthValue.trim())
+  );
+
   return (
     <div className="dashboard-header-shell">
       <div className="dashboard-header-main">
@@ -20,8 +26,16 @@ export const DashboardHeader = ({
         </div>
 
         <div className="dashboard-header-right">
-          <div className="dashboard-header-label">Last Updated</div>
-          <div className="dashboard-header-meta">{lastUpdated}</div>
+          <div className="dashboard-header-meta-group">
+            <div className="dashboard-header-label">Last Updated</div>
+            <div className="dashboard-header-meta">{updatedValue}</div>
+          </div>
+          {hasGrowthValue && (
+            <div className="dashboard-header-meta-group">
+              <div className="dashboard-header-label">Growth Since</div>
+              <div className="dashboard-header-meta">{growthValue}</div>
+            </div>
+          )}
         </div>
       </div>
 

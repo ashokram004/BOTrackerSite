@@ -101,6 +101,7 @@ export const IndiaMovieDashboard = ({
   lastUpdated = 'N/A'
 }) => {
   const [filters, setFilters] = useState({
+    platform: 'ALL',
     state: 'ALL',
     city: 'ALL',
     theater: 'ALL',
@@ -217,6 +218,8 @@ export const IndiaMovieDashboard = ({
     let totalGross = 0;
     let totalBooked = 0;
     let totalTickets = 0;
+    let fastFillingShows = 0;
+    let houseFullShows = 0;
     const venueSet = new Set();
     
     const maps = {
@@ -225,9 +228,9 @@ export const IndiaMovieDashboard = ({
     };
 
     const sources = {
-      BookMyShow: { value: 0, shows: 0, label: 'BookMyShow', meta: SOURCE_META.BookMyShow },
-      District: { value: 0, shows: 0, label: 'District', meta: SOURCE_META.District },
-      Merged: { value: 0, shows: 0, label: 'Merged', meta: SOURCE_META.Merged }
+      BookMyShow: { value: 0, booked: 0, shows: 0, label: 'BookMyShow', meta: SOURCE_META.BookMyShow },
+      District: { value: 0, booked: 0, shows: 0, label: 'District', meta: SOURCE_META.District },
+      Merged: { value: 0, booked: 0, shows: 0, label: 'Merged', meta: SOURCE_META.Merged }
     };
 
     const filtered = [];
@@ -259,6 +262,7 @@ export const IndiaMovieDashboard = ({
       const updatedRow = row.sourceType === sType ? row : { ...row, sourceType: sType };
 
       // --- FILTERING ---
+      if (filters.platform !== 'ALL' && updatedRow.sourceType !== filters.platform) continue;
       if (filters.state !== 'ALL' && updatedRow.state !== filters.state) continue;
       if (filters.city !== 'ALL' && updatedRow.city !== filters.city) continue;
       if (filters.theater !== 'ALL' && updatedRow.theater !== filters.theater) continue;
@@ -279,8 +283,16 @@ export const IndiaMovieDashboard = ({
       totalTickets += total;
       venueSet.add(`${updatedRow.theater || 'Unknown'}-${updatedRow.city || 'Unknown'}`);
 
+      const demandTier = updatedRow.occTier || getOccTier(updatedRow.occ);
+      if (demandTier === 'Sold Out') {
+        houseFullShows += 1;
+      } else if (['Almost Full', 'Fast Filling'].includes(demandTier)) {
+        fastFillingShows += 1;
+      }
+
       if (sources[sType]) {
         sources[sType].value += gross;
+        sources[sType].booked += booked;
         sources[sType].shows += 1;
       }
 
@@ -319,6 +331,8 @@ export const IndiaMovieDashboard = ({
       totalBooked,
       totalTickets,
       totalVenues: venueSet.size,
+      fastFillingShows,
+      houseFullShows,
       occupancy: totalTickets > 0 ? (totalBooked / totalTickets) * 100 : 0,
       sourceBuckets: Object.values(sources),
       stateSummary: formatTable(maps.state),
@@ -333,7 +347,7 @@ export const IndiaMovieDashboard = ({
 
   // Destructure for the JSX to use
   const { 
-    filteredRows, totalGross, totalBooked, totalVenues, occupancy,
+    filteredRows, totalGross, totalBooked, totalVenues, fastFillingShows, houseFullShows, occupancy,
     sourceBuckets, stateSummary, citySummary, theatreSummary, formatSummary, 
     languageSummary, timeSummary, occTierSummary 
   } = stats;
@@ -367,6 +381,10 @@ export const IndiaMovieDashboard = ({
     {
       label: 'Overall Occupancy',
       value: `${Number(occupancy).toFixed(1)}%`
+    },
+    {
+      label: 'Fast Filling / House Full',
+      value: `${formatNumber(fastFillingShows)} / ${formatNumber(houseFullShows)}`
     }
   ];
 
@@ -375,7 +393,6 @@ export const IndiaMovieDashboard = ({
       <div className="kpi-title">{title}</div>
       <div
         className="kpi-value"
-        style={{ fontSize: '32px' }}
       >
         {value}
       </div>
@@ -402,6 +419,7 @@ export const IndiaMovieDashboard = ({
       <h2>{title}</h2>
 
       <div
+        className="table-scroll"
         style={{
           overflowX: 'auto',
           width: '100%'
@@ -552,6 +570,39 @@ export const IndiaMovieDashboard = ({
         {showFilters && (
           <div className="filter-panel">
             <div className="filter-grid">
+              <div>
+                <div className="filter-label">
+                  Platform
+                </div>
+
+                <select
+                  className="filter-select"
+                  value={filters.platform}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      platform: e.target.value
+                    }))
+                  }
+                >
+                  <option value="ALL">
+                    All Platforms
+                  </option>
+
+                  <option value="BookMyShow">
+                    BookMyShow
+                  </option>
+
+                  <option value="District">
+                    District
+                  </option>
+
+                  <option value="Merged">
+                    Merged
+                  </option>
+                </select>
+              </div>
+
               <div>
                 <div className="filter-label">
                   State
@@ -777,7 +828,7 @@ export const IndiaMovieDashboard = ({
           </div>
         )}
 
-        <div className="kpi-grid">
+        <div className="kpi-grid india-kpi-grid">
           {summaryCards.map((card) =>
             renderSummaryCard(
               card.label,
@@ -813,7 +864,7 @@ export const IndiaMovieDashboard = ({
                   </div>
 
                   <div className="platform-tkts">
-                    {formatNumber(bucket.shows)} shows
+                    {formatNumber(bucket.shows)} shows | {formatNumber(bucket.booked)} tickets
                   </div>
                 </div>
               </div>
@@ -872,6 +923,7 @@ export const IndiaMovieDashboard = ({
           <h2>Top Grossing Theatres</h2>
 
           <div
+            className="table-scroll table-scroll-wide table-scroll-theatres"
             style={{
               overflowX: 'auto',
               maxHeight: '400px',
@@ -1019,6 +1071,7 @@ export const IndiaMovieDashboard = ({
           </h2>
 
           <div
+            className="table-scroll table-scroll-wide table-scroll-ledger"
             style={{
               overflowX: 'auto',
               maxHeight: '600px',

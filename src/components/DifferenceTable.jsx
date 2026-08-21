@@ -23,7 +23,7 @@ export const DifferenceTable = ({ title, data, type }) => {
   return (
     <div className="summary-section">
       <h2>{title}</h2>
-      <div style={{ overflowX: 'auto', width: '100%' }}>
+      <div className="table-scroll" style={{ overflowX: 'auto', width: '100%' }}>
         <table>
           <thead>
             <tr>

@@ -29,9 +29,9 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
   }, [data, showAll, rowLimit]);
 
   return (
-    <div className="summary-section">
+    <div className="summary-section us-summary-table">
       <h2>{title}</h2>
-      <div style={{ overflowX: 'auto', width: '100%' }}>
+      <div className="table-scroll table-scroll-us" style={{ overflowX: 'auto', width: '100%' }}>
         <table>
           <thead>
             <tr>

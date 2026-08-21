@@ -68,7 +68,7 @@ export const ShowsTable = ({ rows }) => {
         </span>
       </h2>
 
-      <div style={{ overflowX: 'auto', maxHeight: '600px' }}>
+      <div className="table-scroll table-scroll-wide table-scroll-shows" style={{ overflowX: 'auto', maxHeight: '600px' }}>
         <table>
           <thead>
             <tr>

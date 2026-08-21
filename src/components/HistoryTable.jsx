@@ -58,7 +58,7 @@ export const HistoryTable = ({ data }) => {
         </span>
       </h2>
 
-      <div style={{ overflowX: 'auto', maxHeight: '400px' }}>
+      <div className="table-scroll table-scroll-wide table-scroll-history" style={{ overflowX: 'auto', maxHeight: '400px' }}>
         <table>
           <thead>
             <tr>

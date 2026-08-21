@@ -618,35 +618,25 @@ function App() {
 
   if (!selectedRegion) {
     return (
-      <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px', width: '100%' }}>
-        <div style={{ marginBottom: '30px', textAlign: 'center' }}>
+      <div className="container selection-page">
+        <div className="selection-intro">
           <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
           <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Box-Office Tracking Portal</h1>
           <p style={{ color: '#94a3b8', marginTop: '10px' }}>Choose a market</p>
         </div>
 
-        <div className="dashboard-row" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', width: '100%', maxWidth: '100%' }}>
+        <div className="selection-grid selection-grid-markets">
           {Object.entries(REGION_META).map(([key, meta]) => (
             <button
               key={key}
               type="button"
               onClick={() => handleSelectRegion(key)}
               className="selection-card"
-              style={{
-                textAlign: 'left',
-                background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.65))',
-                border: '1px solid rgba(148, 163, 184, 0.25)',
-                color: '#f8fafc',
-                borderRadius: '18px',
-                padding: '28px',
-                cursor: 'pointer',
-                minHeight: '220px',
-                boxShadow: '0 20px 50px rgba(15,23,42,0.28)'
-              }}
+                
             >
-              <div style={{ fontSize: '12px', color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase' }}>Market</div>
-              <div style={{ fontSize: '32px', fontWeight: 700, margin: '16px 0 8px' }}>{meta.label}</div>
-              <div style={{ color: '#cbd5e1', fontSize: '16px', lineHeight: 1.6 }}>{meta.description}</div>
+              <div className="selection-card-kicker">Market</div>
+              <div className="selection-card-title">{meta.label}</div>
+              <div className="selection-card-description">{meta.description}</div>
             </button>
           ))}
         </div>
@@ -656,24 +646,26 @@ function App() {
 
   if (!selectedMovie) {
     return (
-      <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px' }}>
-        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', textAlign: 'center' }}>
-          <button style={{ position: 'absolute', left: 0 }} onClick={() => {
-            setSelectedMovie(null);
-            setSelectedRegion(null);
-            setSelectedDate(null);
-            navigate(`/`);
-          }} className="toggle-filter-btn">Home</button>
-          <div>
+      <div className="container selection-page">
+        <div className="selection-header">
+          <div className="selection-header-content">
             <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
             <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Market</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{REGION_META[selectedRegion].label}</h2>
           </div>
-          <button style={{ position: 'absolute', right: 0 }} onClick={() => {
-            setSelectedRegion(null);
-            navigate('/');
-          }} className="toggle-filter-btn">Back</button>
+          <div className="selection-nav-row">
+            <button className="selection-nav toggle-filter-btn" onClick={() => {
+              setSelectedMovie(null);
+              setSelectedRegion(null);
+              setSelectedDate(null);
+              navigate(`/`);
+            }}>Home</button>
+            <button className="selection-nav toggle-filter-btn" onClick={() => {
+              setSelectedRegion(null);
+              navigate('/');
+            }}>Back</button>
+          </div>
         </div>
 
         {movieLoading ? (
@@ -683,7 +675,7 @@ function App() {
         ) : movies.length === 0 ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>No movies found for {REGION_META[selectedRegion].label}.</div>
         ) : (
-          <div className="dashboard-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+          <div className="selection-grid selection-grid-movies">
             {movies.map((movie) => (
               <button
                 key={movie.id}
@@ -695,19 +687,10 @@ function App() {
                   navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
                 }}
                 className="selection-card"
-                style={{
-                  background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.7))',
-                  border: '1px solid rgba(148, 163, 184, 0.25)',
-                  borderRadius: '16px',
-                  padding: '20px',
-                  color: '#f8fafc',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  boxShadow: '0 16px 40px rgba(15,23,42,0.26)'
-                }}
+                
               >
-                <div style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Movie</div>
-                <div style={{ fontSize: '24px', fontWeight: 700, marginTop: '14px' }}>{movie.name}</div>
+                <div className="selection-card-kicker">Movie</div>
+                <div className="selection-card-title">{movie.name}</div>
               </button>
             ))}
           </div>
@@ -718,24 +701,26 @@ function App() {
 
   if (!selectedDate) {
     return (
-      <div className="container" style={{ maxWidth: 1100, margin: '40px auto', padding: '20px' }}>
-        <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '24px', textAlign: 'center' }}>
-          <button style={{ position: 'absolute', left: 0 }} onClick={() => {
-            setSelectedMovie(null);
-            setSelectedRegion(null);
-            setSelectedDate(null);
-            navigate(`/`);
-          }} className="toggle-filter-btn">Home</button>
-          <div>
+      <div className="container selection-page">
+        <div className="selection-header">
+          <div className="selection-header-content">
             <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>WkndCinemas</p>
             <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
             <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Movie</p>
             <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{selectedMovie.name}</h2>
           </div>
-          <button style={{ position: 'absolute', right: 0 }} onClick={() => {
-            setSelectedMovie(null);
-            navigate(`/${selectedRegion}`);
-          }} className="toggle-filter-btn">Back</button>
+          <div className="selection-nav-row">
+            <button className="selection-nav toggle-filter-btn" onClick={() => {
+              setSelectedMovie(null);
+              setSelectedRegion(null);
+              setSelectedDate(null);
+              navigate(`/`);
+            }}>Home</button>
+            <button className="selection-nav toggle-filter-btn" onClick={() => {
+              setSelectedMovie(null);
+              navigate(`/${selectedRegion}`);
+            }}>Back</button>
+          </div>
         </div>
 
         {dateLoading ? (
@@ -745,7 +730,7 @@ function App() {
         ) : dates.length === 0 ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>No dates found for this movie.</div>
         ) : (
-          <div className="dashboard-row" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))' }}>
+          <div className="selection-grid selection-grid-dates">
             {dates.map((date) => (
               <button
                 key={date}
@@ -755,19 +740,10 @@ function App() {
                   navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovie.id)}/${encodeURIComponent(date)}`);
                 }}
                 className="selection-card"
-                style={{
-                  background: 'linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.7))',
-                  border: '1px solid rgba(148, 163, 184, 0.25)',
-                  borderRadius: '16px',
-                  padding: '20px',
-                  color: '#f8fafc',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  boxShadow: '0 16px 40px rgba(15,23,42,0.26)'
-                }}
+                
               >
-                <div style={{ fontSize: '12px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Date</div>
-                <div style={{ fontSize: '22px', fontWeight: 700, marginTop: '12px' }}>{date}</div>
+                <div className="selection-card-kicker">Date</div>
+                <div className="selection-card-title">{date}</div>
               </button>
             ))}
           </div>
