@@ -35,6 +35,7 @@ body {
   min-height: 180px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 12px;
   color: var(--text-main);
   font-size: 14px;
@@ -902,7 +903,7 @@ tr:hover td {
 
 /* Refined report shell */
 :root {
-  --bg-color: #07111f;
+  --bg-color: #030914;
   --surface: rgba(13, 27, 45, 0.86);
   --surface-raised: rgba(18, 36, 57, 0.94);
   --surface-soft: rgba(255, 255, 255, 0.045);
@@ -919,16 +920,17 @@ tr:hover td {
 }
 
 html {
-  background: #07111f;
+  background: #030914;
 }
 
 body {
   min-width: 320px;
   padding: 0;
   background:
-    linear-gradient(135deg, rgba(56, 189, 248, 0.07), transparent 32%),
-    radial-gradient(circle at 85% 8%, rgba(245, 158, 11, 0.1), transparent 27%),
-    #07111f;
+    linear-gradient(135deg, rgba(30, 91, 145, 0.16), transparent 34%),
+    radial-gradient(circle at 88% 12%, rgba(14, 116, 184, 0.12), transparent 28%),
+    radial-gradient(circle at 12% 88%, rgba(15, 64, 108, 0.12), transparent 32%),
+    #030914;
   color: var(--text-main);
 }
 
@@ -1645,9 +1647,9 @@ tr:hover td {
   }
 
   .table-scroll-us table {
-    width: 470px;
-    min-width: 470px;
-    table-layout: auto;
+    width: 115%;
+    min-width: 115%;
+    table-layout: fixed;
   }
 
   .table-scroll-us th,
@@ -1660,16 +1662,28 @@ tr:hover td {
 
   .table-scroll-us th:first-child,
   .table-scroll-us td:first-child {
-    width: 135px;
-    max-width: 135px;
+    width: 32%;
+    max-width: none;
     white-space: normal;
     overflow-wrap: anywhere;
   }
 
-  .table-scroll-us th:not(:first-child),
-  .table-scroll-us td:not(:first-child) {
-    width: 67px;
-    max-width: 76px;
+  .table-scroll-us th:nth-child(2),
+  .table-scroll-us td:nth-child(2),
+  .table-scroll-us th:nth-child(3),
+  .table-scroll-us td:nth-child(3),
+  .table-scroll-us th:nth-child(4),
+  .table-scroll-us td:nth-child(4),
+  .table-scroll-us th:nth-child(5),
+  .table-scroll-us td:nth-child(5) {
+    width: 13.25%;
+    max-width: none;
+  }
+
+  .table-scroll-us th:nth-child(6),
+  .table-scroll-us td:nth-child(6) {
+    width: 15%;
+    max-width: none;
   }
 
   th,
