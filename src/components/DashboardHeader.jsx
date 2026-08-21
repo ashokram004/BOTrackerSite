@@ -34,7 +34,7 @@ export const DashboardHeader = ({
             <div className="dashboard-header-meta">{updatedValue}</div>
           </div>
           {hasGrowthValue && (
-            <div className="dashboard-header-meta-group">
+            <div className="dashboard-header-meta-group-right">
               <div className="dashboard-header-label">Growth Since</div>
               <div className="dashboard-header-meta">{growthValue}</div>
             </div>

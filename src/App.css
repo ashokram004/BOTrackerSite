@@ -986,6 +986,12 @@ select {
   gap: 4px;
 }
 
+.dashboard-header-meta-group-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .dashboard-header-meta-group:only-child {
   align-items: flex-end;
   justify-self: end;
@@ -1361,16 +1367,20 @@ tr:hover td {
   .dashboard-header-right {
     min-width: 0;
     padding-top: 0;
-    align-items: flex-start;
-    text-align: left;
+    align-items: flex-end;
+    text-align: right;
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
+    align-items: end;
     width: 100%;
   }
 
   .dashboard-header-meta-group {
     align-items: flex-start;
+  }
+
+  .dashboard-header-meta-group-right {
+    align-items: flex-end;
   }
 
   .dashboard-header-meta-group:last-child:not(:only-child) {
@@ -1390,6 +1400,15 @@ tr:hover td {
     width: max-content;
     max-width: 100%;
     text-align: left !important;
+  }
+
+  .dashboard-header-meta-group-right:only-child {
+    align-items: flex-end;
+    justify-self: end;
+    justify-content: flex-end;
+    width: max-content;
+    max-width: 100%;
+    text-align: right !important;
   }
 
   .kpi-grid,
