@@ -465,7 +465,7 @@ export const IndiaMovieDashboard = ({
         <table>
           <thead>
             <tr>
-              <th>Name</th>
+              <th style={{ width: '25%' }}>Name</th>
               <th>Shows</th>
               <th>Tickets</th>
               <th>Gross</th>
@@ -477,7 +477,9 @@ export const IndiaMovieDashboard = ({
             {(showAll ? data : data.slice(0, limit)).map(
               (row, idx) => (
                 <tr key={`${title}-${row.name || idx}`}>
-                  <td>{row.name || 'Unknown'}</td>
+                  <td style={{ width: '25%' }}>
+                    {row.name || 'Unknown'}
+                  </td>
 
                   <td>
                     {formatNumber(row.shows || 0)}

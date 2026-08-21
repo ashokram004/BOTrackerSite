@@ -7,7 +7,8 @@ export const DashboardHeader = ({
   rightActions = []
 }) => {
   let [updatedValue, growthValue] = String(lastUpdated || '').split(' • Growth since ');
-  updatedValue = updatedValue.toUpperCase() + " IST";
+  updatedValue = updatedValue.toUpperCase();
+  updatedValue = updatedValue.endsWith('IST') ? updatedValue : `${updatedValue} IST`;
   growthValue = growthValue ? growthValue.toUpperCase() : '';
   const hasGrowthValue = Boolean(
     growthValue &&
