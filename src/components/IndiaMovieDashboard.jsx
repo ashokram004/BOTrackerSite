@@ -1103,7 +1103,7 @@ export const IndiaMovieDashboard = ({
           }}
         >
           <h2>
-            Master Ledger{' '}
+            All Showtimes{' '}
             <span
               style={{
                 fontSize: '11px',
