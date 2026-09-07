@@ -1889,6 +1889,7 @@ tr:hover td {
     white-space: normal;
     overflow-wrap: anywhere;
   }
+  
 
   .table-scroll-theatres td:nth-child(3),
   .table-scroll-ledger td:nth-child(3) {
