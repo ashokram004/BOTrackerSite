@@ -289,7 +289,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
     const standardCols = [
       { name: 'Name', key: 'name', pos: 40, align: 'left' },
       { name: 'Shows', key: 'shows', pos: 600, align: 'right' },
-      { name: 'Booked', key: 'booked', pos: 450, align: 'right' },
+      { name: 'Tickets', key: 'booked', pos: 450, align: 'right' },
       { name: 'Gross', key: 'gross', pos: 300, align: 'right' },
       { name: 'Occ %', key: 'occ', pos: 180, align: 'right' },
       { name: 'Δ Gross', key: 'dgross', pos: 40, align: 'right' }
@@ -323,6 +323,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
 export const generateIndiaImageReport = async ({
   movieName = 'Movie',
   showDate = 'N/A',
+  lastUpdated = 'N/A',
   totalGross = 0,
   totalBooked = 0,
   totalVenues = 0,
@@ -466,17 +467,7 @@ export const generateIndiaImageReport = async ({
     ctx.fillText(`India Advance Sales • Show Date: ${showDate}`, PAD, PAD + 85);
     ctx.textAlign = 'right';
     ctx.fillStyle = COLORS.text;
-    const generatedAt = new Date()
-      .toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      })
-      .replace(/\b(am|pm)\b/i, (value) => value.toUpperCase());
-    ctx.fillText(`Generated: ${generatedAt} IST`, W - PAD, PAD + 40);
+    ctx.fillText(`Report: ${lastUpdated} IST`, W - PAD, PAD + 40);
     ctx.textAlign = 'left';
 
     ctx.beginPath();

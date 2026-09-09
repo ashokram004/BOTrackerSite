@@ -398,6 +398,7 @@ export const IndiaMovieDashboard = ({
       const dataUrl = await generateIndiaImageReport({
         movieName,
         showDate,
+        lastUpdated,
         totalGross,
         totalBooked,
         totalVenues,
