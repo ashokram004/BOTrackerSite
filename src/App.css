@@ -602,6 +602,18 @@ select {
   gap: 4px;
 }
 
+.dashboard-header-meta-group > .dashboard-header-label,
+.dashboard-header-meta-group-right > .dashboard-header-label {
+  font-family: inherit;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .dashboard-header-meta-group:only-child {
   align-items: flex-end;
   justify-self: end;
@@ -1346,6 +1358,7 @@ tr:hover td {
 
 .selection-card {
   min-height: 150px;
+  padding: 20px 22px;
   background: linear-gradient(145deg, rgba(9, 23, 39, 0.97), rgba(3, 11, 21, 0.98)) !important;
   border: 1px solid rgba(148, 163, 184, 0.22) !important;
   border-radius: var(--radius-panel) !important;

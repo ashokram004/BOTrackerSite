@@ -24,25 +24,36 @@ const getMovieDateCandidates = (region, movieSlug) => {
   return getMovieRootCandidates(region).map((root) => `${root}/${movieSlug}`);
 };
 
-const formatUtcToIst = (value) => {
+const formatIstTimestamp = (value) => {
   try {
     if (value === null || value === undefined || value === '') return 'N/A';
-    const ms = typeof value === 'number' ? value : Date.parse(String(value));
+    const ms = value instanceof Date
+      ? value.getTime()
+      : typeof value === 'number'
+        ? value
+        : Date.parse(String(value));
     if (!Number.isFinite(ms)) return 'N/A';
-    return new Date(ms).toLocaleString('en-IN', {
+
+    const parts = new Intl.DateTimeFormat('en-IN', {
       timeZone: 'Asia/Kolkata',
       year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
       minute: '2-digit',
       second: '2-digit',
       hour12: true
-    }).replace(/am|pm/i, match => match.toUpperCase());
+    }).formatToParts(new Date(ms));
+    const values = Object.fromEntries(parts.map(({ type, value: partValue }) => [type, partValue]));
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+    return `${values.day} ${months[Number(values.month) - 1]} ${values.year}, ${values.hour}:${values.minute}:${values.second} ${values.dayPeriod.toUpperCase()}`;
   } catch {
     return 'N/A';
   }
 };
+
+const formatUtcToIst = (value) => formatIstTimestamp(value);
 
 const normalizeFirebasePayload = (value) => {
   if (!value) return { data: [] };
@@ -811,20 +822,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
     const initialFilteredKpis = computeFilteredKpis(filteredRowsBase);
 
-    function formatDate(dateObj) {
-      if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) return 'N/A';
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const formattedDay = dateObj.getDate();
-      const formattedMonth = months[dateObj.getMonth()];
-      const formattedYear = dateObj.getFullYear();
-      let displayHours = dateObj.getHours();
-      const displayMinutes = String(dateObj.getMinutes()).padStart(2, "0");
-      const displaySeconds = String(dateObj.getSeconds()).padStart(2, "0");
-      const ampm = displayHours >= 12 ? "PM" : "AM";
-      displayHours = displayHours % 12 || 12;
-      return `${formattedDay} ${formattedMonth} ${formattedYear}, ${displayHours}:${displayMinutes}:${displaySeconds} ${ampm}`;
-    }
-
     const nextData = {
       loading: false,
       kpis,
@@ -834,7 +831,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       filteredKpis: initialFilteredKpis,
       differences,
       metadata: {
-        lastUpdated: formatDate(lastUpdated),
+        lastUpdated: formatIstTimestamp(lastUpdated),
         growthSince: growthSince,
         showDate,
         movieSlug
@@ -842,7 +839,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       error: null
     };
 
-    sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}`, nextData);
+    sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`, nextData);
     setData(nextData);
 
   }, [diffMode, enabled, movieSlug, region, showDate]);
@@ -889,7 +886,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       growthSinceHourly: 'N/A'
     };
 
-    const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}`;
+    const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`;
     let cachedFrameId;
     let cachedTimerId;
     if (refreshKey > 0) sessionDashboardCache.delete(cacheKey);
