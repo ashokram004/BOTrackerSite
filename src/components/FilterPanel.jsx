@@ -23,9 +23,17 @@ export const FilterPanel = ({
   showFilters
 }) => {
   const uniqueValues = useMemo(() => {
-    const rows = rawRows || [];
+    const rows = (rawRows || []).filter((r) => !(r.is_extra || r.t_id === 'EXTRA'));
 
-    const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
+    const normalizeValue = (value) => {
+      const text = String(value ?? '').trim();
+      if (!text) return null;
+      const lowered = text.toLowerCase();
+      if (lowered === 'extra' || lowered.includes('extra')) return null;
+      return text;
+    };
+
+    const uniq = (arr) => [...new Set(arr.map(normalizeValue).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
 
     const states = uniq(rows.map((r) => r.state));
     const chains = uniq(rows.map((r) => r.chain));

@@ -614,6 +614,15 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         timeCats: {}
       };
 
+      const getHighestGrossLanguageKey = (languageSummary) => {
+        const entries = Object.values(languageSummary);
+        if (!entries.length) return 'Unknown';
+        return entries.reduce((best, current) => {
+          if (!best || Number(current.gross || 0) > Number(best.gross || 0)) return current;
+          return best;
+        }, entries[0]).id || 'Unknown';
+      };
+
       dataset.forEach(row => {
         const gross = normalizeNumber(row.gross !== undefined ? row.gross : (row['Gross ($)'] !== undefined ? row['Gross ($)'] : row['Gross']));
         const booked = normalizeNumber(row.booked !== undefined ? row.booked : row['Booked']);
@@ -658,13 +667,23 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
           inc(summary.chains, chain);
           inc(summary.timeCats, timeCat);
         } else {
-          const lang = 'Telugu';
-          if (!summary.languages[lang]) {
-            summary.languages[lang] = { id: lang, name: lang, shows: 0, tickets: 0, booked: 0, gross: 0, d_booked: 0, d_gross: 0, d_tickets: 0 };
+          const formatKey = 'Standard';
+          if (!summary.formats[formatKey]) {
+            summary.formats[formatKey] = { id: formatKey, name: 'Standard', shows: 0, tickets: 0, booked: 0, gross: 0, d_booked: 0, d_gross: 0, d_tickets: 0 };
           }
-          summary.languages[lang].tickets += tickets;
-          summary.languages[lang].booked += booked;
-          summary.languages[lang].gross += gross;
+          summary.formats[formatKey].shows += 1;
+          summary.formats[formatKey].tickets += tickets;
+          summary.formats[formatKey].booked += booked;
+          summary.formats[formatKey].gross += gross;
+
+          const langKey = getHighestGrossLanguageKey(summary.languages);
+          if (!summary.languages[langKey]) {
+            summary.languages[langKey] = { id: langKey, name: langKey, shows: 0, tickets: 0, booked: 0, gross: 0, d_booked: 0, d_gross: 0, d_tickets: 0 };
+          }
+          summary.languages[langKey].shows += 1;
+          summary.languages[langKey].tickets += tickets;
+          summary.languages[langKey].booked += booked;
+          summary.languages[langKey].gross += gross;
         }
       });
 
