@@ -472,6 +472,50 @@ tr:hover td {
   color: white;
 }
 
+.time-filter-custom {
+  min-width: 0;
+}
+
+.custom-time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.custom-time-fields label {
+  min-width: 0;
+}
+
+.custom-time-fields span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-time-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 8px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(2, 9, 18, 0.86);
+  color: var(--text-main);
+  color-scheme: dark;
+  font: inherit;
+  font-size: 12px;
+}
+
+.filter-time-input:focus {
+  border-color: var(--primary);
+}
+
 .toggle-filter-btn {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   border: none;

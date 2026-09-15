@@ -5,6 +5,7 @@ import { DataTable } from './components/DataTable';
 import { ShowsTable } from './components/ShowsTable';
 import { HistoryTable } from './components/HistoryTable';
 import { FilterPanel } from './components/FilterPanel';
+import { CUSTOM_TIME_RANGE, isTimeInRange } from './utils/timeFilter';
 import { DifferenceTable } from './components/DifferenceTable';
 import { generateImageReport } from './utils/imageGenerator';
 import { PacingChart } from './components/PacingChart';
@@ -273,7 +274,9 @@ function App() {
     theater: 'ALL',
     format: 'ALL',
     language: 'ALL',
-    timeCat: 'ALL'
+    timeCat: 'ALL',
+    timeStart: '',
+    timeEnd: ''
   });
 
   const allRows = useMemo(() => rawRows || [], [rawRows]);
@@ -285,7 +288,9 @@ function App() {
       if (filters.theater !== 'ALL' && r.theater !== filters.theater) return false;
       if (filters.format !== 'ALL' && r.format !== filters.format) return false;
       if (filters.language !== 'ALL' && r.language !== filters.language) return false;
-      if (filters.timeCat !== 'ALL' && r.timeCat !== filters.timeCat) return false;
+      if (filters.timeCat === CUSTOM_TIME_RANGE) {
+        if (!isTimeInRange(r.time, filters.timeStart, filters.timeEnd)) return false;
+      } else if (filters.timeCat !== 'ALL' && r.timeCat !== filters.timeCat) return false;
       return true;
     });
   }, [allRows, filters]);
@@ -437,7 +442,10 @@ function App() {
     };
   }, [filteredRows]);
 
-  const noFiltersSelected = Object.values(filters).every((value) => value === 'ALL');
+  const noFiltersSelected = Object.entries(filters).every(([key, value]) => {
+    if (key === 'timeStart' || key === 'timeEnd') return value === '';
+    return value === 'ALL';
+  });
   const displayedKpis = noFiltersSelected ? kpis : filteredSummary.kpis;
   const displayedTables = noFiltersSelected ? tables : filteredSummary.tables;
 

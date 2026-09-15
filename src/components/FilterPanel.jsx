@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { TimeFilter } from './TimeFilter';
 
 const Select = ({ label, value, onChange, options }) => {
   return (
@@ -84,11 +85,10 @@ export const FilterPanel = ({
           options={opt(uniqueValues.languages, 'All Languages')}
         />
 
-        <Select
-          label="Time Of Day"
-          value={filters.timeCat}
-          onChange={(v) => setFilters((p) => ({ ...p, timeCat: v }))}
-          options={opt(uniqueValues.timeCats, 'All Times')}
+        <TimeFilter
+          timeCategories={uniqueValues.timeCats}
+          filters={filters}
+          setFilters={setFilters}
         />
       </div>
     </div>

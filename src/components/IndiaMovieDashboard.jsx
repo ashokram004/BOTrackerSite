@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { DashboardHeader } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
+import { TimeFilter } from './TimeFilter';
+import { CUSTOM_TIME_RANGE, isTimeInRange } from '../utils/timeFilter';
 
 const formatRupee = (value) => {
   const n = Number(value || 0);
@@ -109,6 +111,8 @@ export const IndiaMovieDashboard = ({
     format: 'ALL',
     language: 'ALL',
     timeCat: 'ALL',
+    timeStart: '',
+    timeEnd: '',
     occTier: 'ALL'
   });
 
@@ -270,7 +274,9 @@ export const IndiaMovieDashboard = ({
       if (filters.theater !== 'ALL' && updatedRow.theater !== filters.theater) continue;
       if (filters.format !== 'ALL' && updatedRow.format !== filters.format) continue;
       if (filters.language !== 'ALL' && updatedRow.language !== filters.language) continue;
-      if (filters.timeCat !== 'ALL' && updatedRow.timeCat !== filters.timeCat) continue;
+      if (filters.timeCat === CUSTOM_TIME_RANGE) {
+        if (!isTimeInRange(updatedRow.time, filters.timeStart, filters.timeEnd)) continue;
+      } else if (filters.timeCat !== 'ALL' && updatedRow.timeCat !== filters.timeCat) continue;
       if (filters.occTier !== 'ALL' && updatedRow.occTier !== filters.occTier) continue;
 
       filtered.push(updatedRow);
@@ -804,35 +810,11 @@ export const IndiaMovieDashboard = ({
                 </select>
               </div>
 
-              <div>
-                <div className="filter-label">
-                  Time of Day
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.timeCat}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      timeCat: e.target.value
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Times
-                  </option>
-
-                  {uniqueTimeCats.map((time) => (
-                    <option
-                      key={time}
-                      value={time}
-                    >
-                      {time}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <TimeFilter
+                timeCategories={uniqueTimeCats}
+                filters={filters}
+                setFilters={setFilters}
+              />
 
               <div>
                 <div className="filter-label">
