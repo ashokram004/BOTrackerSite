@@ -64,7 +64,7 @@ export const KPIGrid = ({ kpis }) => {
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Overall Occupancy</div><div className={`kpi-sub ${dShows.class}`}>-</div></div>
+        <div className="kpi-head"><div className="kpi-title">Overall Occupancy</div><div className={`kpi-sub ${dShows.class}`}></div></div>
         <div
           className="kpi-value"
           style={{ color: getOccupancyColor(kpis.occupancy.val) }}
@@ -74,7 +74,7 @@ export const KPIGrid = ({ kpis }) => {
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Avg Ticket Price</div><div className={`kpi-sub ${dShows.class}`}>-</div></div>
+        <div className="kpi-head"><div className="kpi-title">Avg Ticket Price</div><div className={`kpi-sub ${dShows.class}`}></div></div>
         <div className="kpi-value">${avgTicketPrice.toFixed(0)}</div>
       </div>
     </div>

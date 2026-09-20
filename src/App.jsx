@@ -10,7 +10,7 @@ import { DifferenceTable } from './components/DifferenceTable';
 import { generateImageReport } from './utils/imageGenerator';
 import { PacingChart } from './components/PacingChart';
 import { IndiaMovieDashboard } from './components/IndiaMovieDashboard';
-import { DashboardHeader } from './components/DashboardHeader';
+import { DashboardHeader, TEST_MOVIE_POSTER_URL } from './components/DashboardHeader';
 import { LoadingState } from './components/LoadingState';
 import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
@@ -258,7 +258,8 @@ function App() {
     rawRows,
     historyData,
     differences,
-    includeDifferences
+    includeDifferences,
+    lastLiveUpdate
   } = selectedRegion === 'india' ? { loading: indiaDashboardData.loading, kpis: null, tables: null, metadata: { showDate: indiaDashboardData.showDate }, error: indiaDashboardData.error, rawRows: indiaDashboardData.rows, historyData: [], differences: null, includeDifferences: false } : dashboardData;
 
   const dashboardIsCurrent = selectedRegion === 'india'
@@ -268,6 +269,7 @@ function App() {
 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showLiveUpdate, setShowLiveUpdate] = useState(false);
   const [filters, setFilters] = useState({
     state: 'ALL',
     chain: 'ALL',
@@ -278,6 +280,14 @@ function App() {
     timeStart: '',
     timeEnd: ''
   });
+
+  useEffect(() => {
+    if (!lastLiveUpdate || selectedRegion !== 'usa') return undefined;
+
+    setShowLiveUpdate(true);
+    const timeoutId = setTimeout(() => setShowLiveUpdate(false), 4000);
+    return () => clearTimeout(timeoutId);
+  }, [lastLiveUpdate, selectedRegion]);
 
   const allRows = useMemo(() => rawRows || [], [rawRows]);
 
@@ -498,13 +508,28 @@ function App() {
     }
 
     return (
-      <div id="app">
+      <>
+        {showLiveUpdate && (
+          <div className="live-update-demo-banner" role="status" aria-live="polite">
+            <span className="live-update-demo-icon" aria-hidden="true">&#10003;</span>
+            <span>
+              <strong>Live data updated</strong>
+              <small>Your dashboard is up to date</small>
+            </span>
+          </div>
+        )}
+        <div
+          id="app"
+          className="dashboard-poster-backdrop"
+          style={{ '--dashboard-poster-image': `url("${TEST_MOVIE_POSTER_URL}")` }}
+        >
         <div className="container">
           <DashboardHeader
             marketLabel={selectedRegion ? <><span className="dashboard-brand">TheWkndCinema</span> {REGION_META[selectedRegion]?.label} Box Office Tracking</> : 'Box Office Tracking'}
             movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
             showDate={metadata?.showDate || selectedDateValue}
             lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
+            moviePosterUrl={TEST_MOVIE_POSTER_URL}
             leftActions={[
               { label: 'Home', onClick: () => {
                   setSelectedDate(null);
@@ -598,7 +623,8 @@ function App() {
             @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Fandango
           </div>
         </div>
-      </div>
+        </div>
+      </>
     );
   };
 

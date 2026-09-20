@@ -236,7 +236,8 @@ const buildIndiaDashboard = (payload) => {
       showDate
     },
     error: null,
-    differences: null
+    differences: null,
+    lastLiveUpdate: null
   };
 };
 
@@ -275,7 +276,9 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     hourlySnapshotReady: false,
     lastUpdated: 'N/A',
     growthSinceDaily: 'N/A',
-    growthSinceHourly: 'N/A'
+    growthSinceHourly: 'N/A',
+    receivedInitialCurrentData: false,
+    lastLiveUpdate: null
   });
   const requestIdRef = useRef(0);
 
@@ -377,7 +380,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
           showDate
         },
         error: null,
-        differences: null
+        differences: null,
+        lastLiveUpdate: null
       });
       return;
     }
@@ -853,7 +857,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         showDate,
         movieSlug
       },
-      error: null
+      error: null,
+      lastLiveUpdate: refs.current.lastLiveUpdate
     };
 
     sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`, nextData);
@@ -875,7 +880,9 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         hourlySnapshotReady: false,
         lastUpdated: 'N/A',
         growthSinceDaily: 'N/A',
-        growthSinceHourly: 'N/A'
+        growthSinceHourly: 'N/A',
+        receivedInitialCurrentData: false,
+        lastLiveUpdate: null
       };
       setData({
         loading: false,
@@ -886,7 +893,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         filteredKpis: null,
         metadata: null,
         error: null,
-        differences: null
+        differences: null,
+        lastLiveUpdate: null
       });
       return undefined;
     }
@@ -900,7 +908,9 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       hourlySnapshotReady: false,
       lastUpdated: 'N/A',
       growthSinceDaily: 'N/A',
-      growthSinceHourly: 'N/A'
+      growthSinceHourly: 'N/A',
+      receivedInitialCurrentData: false,
+      lastLiveUpdate: null
     };
 
     const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`;
@@ -938,6 +948,11 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         refs.current.currentData = payload;
         if (refs.current.currentData.last_updated) {
             refs.current.lastUpdated = new Date(refs.current.currentData.last_updated);
+        }
+        if (refs.current.receivedInitialCurrentData) {
+          refs.current.lastLiveUpdate = Date.now();
+        } else {
+          refs.current.receivedInitialCurrentData = true;
         }
         process();
       }, (error) => {

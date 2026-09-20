@@ -1,8 +1,11 @@
+export const TEST_MOVIE_POSTER_URL = 'https://assets-in.bmscdn.com/discovery-catalog/events/tr:w-250,h-390/et00436621-ultjcphpnk-portrait.jpg';
+
 export const DashboardHeader = ({
   marketLabel = 'Box Office Tracking',
   movieName = '',
   showDate = '',
   lastUpdated = '',
+  moviePosterUrl = '',
   leftActions = [],
   rightActions = []
 }) => {
@@ -19,13 +22,28 @@ export const DashboardHeader = ({
     <div className="dashboard-header-shell">
       <div className="dashboard-header-main">
         <div className="dashboard-header-left">
-          <div className="dashboard-header-label">{marketLabel}</div>
-          <div className="dashboard-header-title">{movieName}</div>
-          {showDate && (
-            <div className="dashboard-header-subtext">
-              Show Date: <strong>{showDate}</strong>
+          <div
+            className="dashboard-header-movie-row"
+            style={moviePosterUrl ? { '--movie-poster-image': `url("${moviePosterUrl}")` } : undefined}
+          >
+            {moviePosterUrl && (
+              <img
+                className="dashboard-movie-poster"
+                src={moviePosterUrl}
+                alt={`${movieName} poster`}
+              />
+            )}
+            <div className="dashboard-header-movie-copy">
+              <div className="dashboard-header-label">{marketLabel}</div>
+              <div className="dashboard-header-title">{movieName}</div>
+              {showDate && (
+                <div className="dashboard-header-date-group">
+                  <div className="dashboard-header-label">Show Date</div>
+                  <div className="dashboard-header-meta dashboard-header-date-value">{showDate}</div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         <div className="dashboard-header-right">
