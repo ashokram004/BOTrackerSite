@@ -1,4 +1,4 @@
-export const DEFAULT_MOVIE_POSTER_URL = 'https://assets-in.bmscdn.com/discovery-catalog/events/tr:w-250,h-390/et00436621-ultjcphpnk-portrait.jpg';
+export const DEFAULT_MOVIE_POSTER_URL = 'https://drive.google.com/file/d/15N4n9XlpRgxsAui3T7SQd02yZUMSmSLD/view?usp=sharing';
 
 export const DashboardHeader = ({
   marketLabel = 'Box Office Tracking',
