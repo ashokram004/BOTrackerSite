@@ -265,14 +265,14 @@ export const PacingChart = ({ historyData }) => {
             padding: '14px',
             border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '12px',
-            color: '#E8E8F0',
+            color: 'var(--text-main)',
             fontFamily: 'sans-serif',
             fontSize: '14px',
             boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)',
             zIndex: 10,
             pointerEvents: 'none'
           }}>
-            <div style={{ fontWeight: 'bold', borderBottom: '1px solid #334155', paddingBottom: '6px', marginBottom: '8px', color: '#FFF' }}>
+            <div className="pacing-tooltip-title" style={{ fontWeight: 'bold', borderBottom: '1px solid #334155', paddingBottom: '6px', marginBottom: '8px' }}>
               Time Slot: {hoveredData.time}
             </div>
             {hoveredData.Today !== null && hoveredData.Today !== undefined && (
@@ -306,15 +306,15 @@ export const PacingChart = ({ historyData }) => {
       <div style={{ display: 'flex', justifyContent: 'center', gap: '30px', marginTop: '15px', fontFamily: 'sans-serif', fontSize: '14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '20px', height: '4px', backgroundColor: '#4ade80', borderRadius: '2px' }} />
-          <span style={{ color: '#E8E8F0', fontWeight: 'bold' }}>Today</span>
+          <span className="pacing-legend-label">Today</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '20px', height: '4px', borderTop: '3px dashed #f5a623' }} />
-          <span style={{ color: '#E8E8F0', fontWeight: 'bold' }}>Yesterday</span>
+          <span className="pacing-legend-label">Yesterday</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '20px', height: '4px', borderTop: '3px dashed #64748b' }} />
-          <span style={{ color: '#E8E8F0', fontWeight: 'bold' }}>Day Before</span>
+          <span className="pacing-legend-label">Day Before</span>
         </div>
       </div>
     </div>

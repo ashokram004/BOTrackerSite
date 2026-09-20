@@ -29,6 +29,19 @@ const REGION_META = {
   }
 };
 
+const ThemeToggle = ({ theme, onToggle }) => (
+  <button
+    type="button"
+    className="theme-toggle"
+    onClick={onToggle}
+    aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+  >
+    <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+    {theme === 'dark' ? 'Light' : 'Dark'}
+  </button>
+);
+
 const getMovieRootCandidates = (region) => {
   const normalized = String(region || '').toLowerCase();
   if (normalized === 'india') {
@@ -105,6 +118,7 @@ const loadNodeWithRetry = async (roots, attempts = 4) => {
 function App() {
   const { region: routeRegion, movie: routeMovieSlug, date: routeDate } = useParams();
   const navigate = useNavigate();
+  const [theme, setTheme] = useState(() => localStorage.getItem('bo-tracker-theme') || 'dark');
   const normalizedRegion = routeRegion === 'usa' || routeRegion === 'india' ? routeRegion : null;
   const routeMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
   const [selectedRegion, setSelectedRegion] = useState(normalizedRegion);
@@ -119,6 +133,13 @@ function App() {
   const [diffMode, setDiffMode] = useState('hourly');
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('bo-tracker-theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
   useEffect(() => {
     const nextMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
@@ -478,7 +499,9 @@ function App() {
 
     if (selectedRegion === 'india') {
       return (
-        <IndiaMovieDashboard
+        <>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          <IndiaMovieDashboard
           rows={indiaDashboardData.rows || []}
           movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
           showDate={selectedDateValue}
@@ -500,7 +523,8 @@ function App() {
             navigate('/');
           }}
           onReload={() => setIndiaRefreshKey((value) => value + 1)}
-        />
+          />
+        </>
       );
     }
 
@@ -510,6 +534,7 @@ function App() {
 
     return (
       <>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
         {showLiveUpdate && (
           <div className="live-update-demo-banner" role="status" aria-live="polite">
             <span className="live-update-demo-icon" aria-hidden="true">&#10003;</span>
@@ -627,7 +652,9 @@ function App() {
 
   if (!selectedRegion) {
     return (
-      <div className="container selection-page">
+      <>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <div className="container selection-page">
         <div className="selection-intro">
           <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
           <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Box-Office Tracking Portal</h1>
@@ -649,13 +676,16 @@ function App() {
             </button>
           ))}
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
   if (!selectedMovie) {
     return (
-      <div className="container selection-page">
+      <>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <div className="container selection-page">
         <div className="selection-header">
           <div className="selection-header-content">
             <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
@@ -704,13 +734,16 @@ function App() {
             ))}
           </div>
         )}
-      </div>
+        </div>
+      </>
     );
   }
 
   if (!selectedDate) {
     return (
-      <div className="container selection-page">
+      <>
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        <div className="container selection-page">
         <div className="selection-header">
           <div className="selection-header-content">
             <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
@@ -757,7 +790,8 @@ function App() {
             ))}
           </div>
         )}
-      </div>
+        </div>
+      </>
     );
   }
 

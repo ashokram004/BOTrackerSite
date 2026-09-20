@@ -542,7 +542,6 @@ export const IndiaMovieDashboard = ({
               borderRadius: '8px',
               border: '1px solid rgba(255,255,255,0.15)',
               background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
-              color: '#e2e8f0',
               fontSize: '13px',
               fontWeight: 600,
               letterSpacing: '0.2px',
@@ -981,21 +980,11 @@ export const IndiaMovieDashboard = ({
                   <tr
                     key={`${row.name}-${row.city}`}
                   >
-                    <td
-                      style={{
-                        color: '#94a3b8',
-                        fontSize: '11px'
-                      }}
-                    >
+                    <td className="location-cell" style={{ fontSize: '11px' }}>
                       {row.state}
                     </td>
 
-                    <td
-                      style={{
-                        color: '#94a3b8',
-                        fontSize: '11px'
-                      }}
-                    >
+                    <td className="location-cell" style={{ fontSize: '11px' }}>
                       {row.city}
                     </td>
 
@@ -1050,7 +1039,6 @@ export const IndiaMovieDashboard = ({
                   border: '1px solid rgba(255,255,255,0.15)',
                   background:
                     'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
-                  color: '#e2e8f0',
                   fontSize: '13px',
                   fontWeight: 600,
                   letterSpacing: '0.2px',
@@ -1137,12 +1125,7 @@ export const IndiaMovieDashboard = ({
                           'Unknown'}
                       </td>
 
-                      <td
-                        style={{
-                          color: '#94a3b8',
-                          fontSize: '11px'
-                        }}
-                      >
+                      <td className="location-cell" style={{ fontSize: '11px' }}>
                         {row.city}
                       </td>
 
@@ -1150,12 +1133,7 @@ export const IndiaMovieDashboard = ({
                         {row.theater}
                       </td>
 
-                      <td
-                        style={{
-                          color: '#94a3b8',
-                          fontSize: '11px'
-                        }}
-                      >
+                      <td className="location-cell" style={{ fontSize: '11px' }}>
                         {row.language} /{' '}
                         {row.format}
                       </td>
