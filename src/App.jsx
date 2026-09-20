@@ -10,7 +10,7 @@ import { DifferenceTable } from './components/DifferenceTable';
 import { generateImageReport } from './utils/imageGenerator';
 import { PacingChart } from './components/PacingChart';
 import { IndiaMovieDashboard } from './components/IndiaMovieDashboard';
-import { DashboardHeader, TEST_MOVIE_POSTER_URL } from './components/DashboardHeader';
+import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './components/DashboardHeader';
 import { LoadingState } from './components/LoadingState';
 import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
@@ -483,6 +483,7 @@ function App() {
           movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
           showDate={selectedDateValue}
           lastUpdated={indiaDashboardData.lastUpdated || 'N/A'}
+          moviePosterUrl={indiaDashboardData.posterUrl}
           onBack={() => {
             setSelectedDate(null);
             navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}`);
@@ -518,18 +519,14 @@ function App() {
             </span>
           </div>
         )}
-        <div
-          id="app"
-          className="dashboard-poster-backdrop"
-          style={{ '--dashboard-poster-image': `url("${TEST_MOVIE_POSTER_URL}")` }}
-        >
+        <div id="app">
         <div className="container">
           <DashboardHeader
             marketLabel={selectedRegion ? <><span className="dashboard-brand">TheWkndCinema</span> {REGION_META[selectedRegion]?.label} Box Office Tracking</> : 'Box Office Tracking'}
             movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
             showDate={metadata?.showDate || selectedDateValue}
             lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
-            moviePosterUrl={TEST_MOVIE_POSTER_URL}
+            moviePosterUrl={metadata?.posterUrl || DEFAULT_MOVIE_POSTER_URL}
             leftActions={[
               { label: 'Home', onClick: () => {
                   setSelectedDate(null);

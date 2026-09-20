@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { DashboardHeader, TEST_MOVIE_POSTER_URL } from './DashboardHeader';
+import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
 import { CUSTOM_TIME_RANGE, isTimeInRange } from '../utils/timeFilter';
@@ -97,6 +97,7 @@ export const IndiaMovieDashboard = ({
   rows = [],
   movieName = 'Movie',
   showDate = 'N/A',
+  moviePosterUrl = '',
   onBack,
   onChangeMovie,
   onHome,
@@ -572,18 +573,14 @@ export const IndiaMovieDashboard = ({
   );
 
   return (
-    <div
-      id="app"
-      className="dashboard-poster-backdrop"
-      style={{ '--dashboard-poster-image': `url("${TEST_MOVIE_POSTER_URL}")` }}
-    >
+    <div id="app">
       <div className="container">
         <DashboardHeader
           marketLabel={<><span className="dashboard-brand">TheWkndCinema</span> India Box Office Tracking</>}
           movieName={movieName}
           showDate={showDate}
           lastUpdated={lastUpdated}
-          moviePosterUrl={TEST_MOVIE_POSTER_URL}
+          moviePosterUrl={moviePosterUrl || DEFAULT_MOVIE_POSTER_URL}
           leftActions={[
             {
               label: 'Home',

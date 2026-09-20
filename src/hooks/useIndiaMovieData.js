@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { onValue, ref } from 'firebase/database';
 import { database } from '../firebaseConfig';
+import { getPosterUrl } from '../utils/moviePoster';
 
 const toNumber = (value) => {
   const n = Number(value);
@@ -224,7 +225,7 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       });
     }
 
-    const finalize = (rows, error = null, lastUpdatedValue = null) => {
+    const finalize = (rows, error = null, lastUpdatedValue = null, posterUrl = '') => {
       if (!active) return;
       const nextData = {
         loading: false,
@@ -232,7 +233,8 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
         error,
         movieName: movieSlug,
         showDate,
-        lastUpdated: formatIstDate(lastUpdatedValue || 'N/A')
+        lastUpdated: formatIstDate(lastUpdatedValue || 'N/A'),
+        posterUrl
       };
       sessionIndiaDashboardCache.set(cacheKey, nextData);
       setData(nextData);
@@ -246,7 +248,12 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
 
       const flattened = getRowsFromPayload(snapshot.val());
       const rows = flattened.rows;
-      finalize(rows, null, flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null);
+      finalize(
+        rows,
+        null,
+        flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null,
+        getPosterUrl(snapshot.val())
+      );
     }, (error) => {
       finalize([], error.message);
     });

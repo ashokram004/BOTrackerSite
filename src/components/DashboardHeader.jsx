@@ -1,11 +1,11 @@
-export const TEST_MOVIE_POSTER_URL = 'https://assets-in.bmscdn.com/discovery-catalog/events/tr:w-250,h-390/et00436621-ultjcphpnk-portrait.jpg';
+export const DEFAULT_MOVIE_POSTER_URL = 'https://assets-in.bmscdn.com/discovery-catalog/events/tr:w-250,h-390/et00436621-ultjcphpnk-portrait.jpg';
 
 export const DashboardHeader = ({
   marketLabel = 'Box Office Tracking',
   movieName = '',
   showDate = '',
   lastUpdated = '',
-  moviePosterUrl = '',
+  moviePosterUrl = DEFAULT_MOVIE_POSTER_URL,
   leftActions = [],
   rightActions = []
 }) => {
@@ -22,10 +22,7 @@ export const DashboardHeader = ({
     <div className="dashboard-header-shell">
       <div className="dashboard-header-main">
         <div className="dashboard-header-left">
-          <div
-            className="dashboard-header-movie-row"
-            style={moviePosterUrl ? { '--movie-poster-image': `url("${moviePosterUrl}")` } : undefined}
-          >
+          <div className="dashboard-header-movie-row">
             {moviePosterUrl && (
               <img
                 className="dashboard-movie-poster"

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ref, onValue } from 'firebase/database';
 import { database } from '../firebaseConfig';
+import { getPosterUrl } from '../utils/moviePoster';
 
 const DEFAULT_MOVIE_SLUG = 'peddi-2026';
 const DEFAULT_SHOW_DATE = '2026-06-03';
@@ -278,7 +279,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     growthSinceDaily: 'N/A',
     growthSinceHourly: 'N/A',
     receivedInitialCurrentData: false,
-    lastLiveUpdate: null
+    lastLiveUpdate: null,
+    posterUrl: ''
   });
   const requestIdRef = useRef(0);
 
@@ -855,7 +857,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         lastUpdated: formatIstTimestamp(lastUpdated),
         growthSince: growthSince,
         showDate,
-        movieSlug
+        movieSlug,
+        posterUrl: refs.current.posterUrl
       },
       error: null,
       lastLiveUpdate: refs.current.lastLiveUpdate
@@ -882,7 +885,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         growthSinceDaily: 'N/A',
         growthSinceHourly: 'N/A',
         receivedInitialCurrentData: false,
-        lastLiveUpdate: null
+        lastLiveUpdate: null,
+        posterUrl: ''
       };
       setData({
         loading: false,
@@ -910,7 +914,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       growthSinceDaily: 'N/A',
       growthSinceHourly: 'N/A',
       receivedInitialCurrentData: false,
-      lastLiveUpdate: null
+      lastLiveUpdate: null,
+      posterUrl: ''
     };
 
     const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`;
@@ -946,6 +951,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         if (!payload || (!payload.data && !payload.master_shows_data && !payload.last_snapshot)) return;
 
         refs.current.currentData = payload;
+        refs.current.posterUrl = getPosterUrl(payload);
         if (refs.current.currentData.last_updated) {
             refs.current.lastUpdated = new Date(refs.current.currentData.last_updated);
         }
