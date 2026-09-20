@@ -157,14 +157,14 @@
 
 .dashboard-header-date-group {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 10px;
+  align-items: center;
+  gap: 8px;
 }
 
 .dashboard-header-date-value {
-  color: #f8fafc;
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.88rem;
 }
 
 .dashboard-header-label {
@@ -854,9 +854,8 @@ select {
 }
 
 .dashboard-header-date-value {
-  color: #ffffff;
+  color: #e4e4e4;
   font-weight: 700;
-  font-size: 0.88rem;
 }
 
 .dashboard-header-actions {
