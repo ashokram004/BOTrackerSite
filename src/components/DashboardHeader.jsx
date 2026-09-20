@@ -1,4 +1,4 @@
-export const DEFAULT_MOVIE_POSTER_URL = 'https://drive.google.com/file/d/15N4n9XlpRgxsAui3T7SQd02yZUMSmSLD/view?usp=sharing';
+export const DEFAULT_MOVIE_POSTER_URL = 'https://drive.google.com/thumbnail?id=15N4n9XlpRgxsAui3T7SQd02yZUMSmSLD&sz=w1000';
 
 export const DashboardHeader = ({
   marketLabel = 'Box Office Tracking',
