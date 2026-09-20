@@ -306,7 +306,7 @@ function App() {
     if (!lastLiveUpdate || selectedRegion !== 'usa') return undefined;
 
     setShowLiveUpdate(true);
-    const timeoutId = setTimeout(() => setShowLiveUpdate(false), 4000);
+    const timeoutId = setTimeout(() => setShowLiveUpdate(false), 6000);
     return () => clearTimeout(timeoutId);
   }, [lastLiveUpdate, selectedRegion]);
 
