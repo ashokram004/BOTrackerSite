@@ -137,10 +137,10 @@
   gap: 16px;
   isolation: isolate;
   overflow: hidden;
-  border-radius: var(--poster-radius);
 }
 
 .dashboard-movie-poster {
+  display: none;
   width: 92px;
   height: 108px;
   flex: 0 0 92px;
