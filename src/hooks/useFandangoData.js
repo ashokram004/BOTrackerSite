@@ -940,6 +940,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       const currentRef = isIndia
         ? ref(database, `${pathPrefix}/${showDate}`)
         : ref(database, `${pathPrefix}/${showDate}/master_shows_data`);
+      const posterRef = ref(database, `${pathPrefix}/${showDate}/posterUrl`);
       const snapshotRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/last_snapshot`);
       const hourlySnapshotRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/previous_run_snapshot`);
       const historyRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/history`);
@@ -951,7 +952,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         if (!payload || (!payload.data && !payload.master_shows_data && !payload.last_snapshot)) return;
 
         refs.current.currentData = payload;
-        refs.current.posterUrl = getPosterUrl(payload);
         if (refs.current.currentData.last_updated) {
             refs.current.lastUpdated = new Date(refs.current.currentData.last_updated);
         }
@@ -967,6 +967,14 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       });
 
       unsubscribes.push(unsubCurrent);
+
+      const unsubPoster = onValue(posterRef, (snapshot) => {
+        if (requestIdRef.current !== requestId) return;
+        refs.current.posterUrl = snapshot.exists() ? getPosterUrl(snapshot.val()) : '';
+        process();
+      });
+
+      unsubscribes.push(unsubPoster);
 
       if (isIndia) return;
 

@@ -210,6 +210,7 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     }
 
     const candidates = [`India/movies/${movieSlug}/${showDate}/master_shows_data`];
+    const posterPath = `India/movies/${movieSlug}/${showDate}/posterUrl`;
     const cacheKey = `${movieSlug}/${showDate}`;
     let active = true;
 
@@ -225,7 +226,11 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       });
     }
 
-    const finalize = (rows, error = null, lastUpdatedValue = null, posterUrl = '') => {
+    let latestRows = [];
+    let latestLastUpdated = null;
+    let latestPosterUrl = '';
+
+    const finalize = (rows, error = null, lastUpdatedValue = null, posterUrl = latestPosterUrl) => {
       if (!active) return;
       const nextData = {
         loading: false,
@@ -240,6 +245,12 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       setData(nextData);
     };
 
+    const unsubscribePoster = onValue(ref(database, posterPath), (snapshot) => {
+      if (!active) return;
+      latestPosterUrl = snapshot.exists() ? getPosterUrl(snapshot.val()) : '';
+      if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
+    });
+
     const unsubscribe = onValue(ref(database, candidates[0]), (snapshot) => {
       if (!snapshot.exists()) {
         finalize([]);
@@ -248,11 +259,13 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
 
       const flattened = getRowsFromPayload(snapshot.val());
       const rows = flattened.rows;
+      latestRows = rows;
+      latestLastUpdated = flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null;
       finalize(
         rows,
         null,
-        flattened.lastUpdated || rows.find((row) => row.lastUpdated)?.lastUpdated || null,
-        getPosterUrl(snapshot.val())
+        latestLastUpdated,
+        latestPosterUrl
       );
     }, (error) => {
       finalize([], error.message);
@@ -263,6 +276,7 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       cancelAnimationFrame(frameId);
       clearTimeout(timerId);
       unsubscribe();
+      unsubscribePoster();
     };
   }, [enabled, movieSlug, showDate, refreshKey]);
 
