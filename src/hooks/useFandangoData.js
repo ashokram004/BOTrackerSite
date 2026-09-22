@@ -84,12 +84,12 @@ const getOccTier = (occ = 0) => {
 
 const getTimeCategory = (timeValue) => {
   const raw = String(timeValue || '').trim();
-  if (!raw) return '7. Unknown Time';
+  if (!raw) return 'Unknown Time';
 
   try {
     const parsed = raw.includes(' ') ? raw : `${raw}`;
     const match = parsed.match(/(\d{1,2}):(\d{2})/);
-    if (!match) return '7. Unknown Time';
+    if (!match) return 'Unknown Time';
 
     let hour = Number(match[1]);
     const minute = Number(match[2]);
@@ -101,17 +101,17 @@ const getTimeCategory = (timeValue) => {
     if (isAm && hour === 12) hour = 0;
 
     if (minute === 0 && hour === 0 && !isPm && !isAm) {
-      return '6. Midnight (12am-5am)';
+      return 'Midnight (12am-5am)';
     }
 
-    if (hour >= 5 && hour < 9) return '1. Early Morning (5am-9am)';
-    if (hour >= 9 && hour < 12) return '2. Morning (9am-12pm)';
-    if (hour >= 12 && hour < 16) return '3. Afternoon (12pm-4pm)';
-    if (hour >= 16 && hour < 20) return '4. Evening (4pm-8pm)';
-    if (hour >= 20 && hour < 24) return '5. Night (8pm-12am)';
-    return '6. Midnight (12am-5am)';
+    if (hour >= 5 && hour < 9) return 'Early Morning (5am-9am)';
+    if (hour >= 9 && hour < 12) return 'Morning (9am-12pm)';
+    if (hour >= 12 && hour < 16) return 'Afternoon (12pm-4pm)';
+    if (hour >= 16 && hour < 20) return 'Evening (4pm-8pm)';
+    if (hour >= 20 && hour < 24) return 'Night (8pm-12am)';
+    return 'Midnight (12am-5am)';
   } catch {
-    return '7. Unknown Time';
+    return 'Unknown Time';
   }
 };
 
@@ -440,26 +440,26 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         const hours = Number.isFinite(t.getTime()) ? t.getHours() : null;
         if (hours === null) {
           const m = cleanTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-          if (!m) return '7. Unknown Time';
+          if (!m) return 'Unknown Time';
           let h = parseInt(m[1], 10);
           const ampm = m[3].toUpperCase();
           if (ampm === 'PM' && h !== 12) h += 12;
           if (ampm === 'AM' && h === 12) h = 0;
-          if (h >= 5 && h < 9) return '1. Early Morning (5am-9am)';
-          if (h >= 9 && h < 12) return '2. Morning (9am-12pm)';
-          if (h >= 12 && h < 16) return '3. Afternoon (12pm-4pm)';
-          if (h >= 16 && h < 20) return '4. Evening (4pm-8pm)';
-          if (h >= 20 && h < 24) return '5. Night (8pm-12am)';
-          return '6. Midnight (12am-5am)';
+          if (h >= 5 && h < 9) return 'Early Morning (5am-9am)';
+          if (h >= 9 && h < 12) return 'Morning (9am-12pm)';
+          if (h >= 12 && h < 16) return 'Afternoon (12pm-4pm)';
+          if (h >= 16 && h < 20) return 'Evening (4pm-8pm)';
+          if (h >= 20 && h < 24) return 'Night (8pm-12am)';
+          return 'Midnight (12am-5am)';
         }
-        if (hours >= 5 && hours < 9) return '1. Early Morning (5am-9am)';
-        if (hours >= 9 && hours < 12) return '2. Morning (9am-12pm)';
-        if (hours >= 12 && hours < 16) return '3. Afternoon (12pm-4pm)';
-        if (hours >= 16 && hours < 20) return '4. Evening (4pm-8pm)';
-        if (hours >= 20 && hours < 24) return '5. Night (8pm-12am)';
-        return '6. Midnight (12am-5am)';
+        if (hours >= 5 && hours < 9) return 'Early Morning (5am-9am)';
+        if (hours >= 9 && hours < 12) return 'Morning (9am-12pm)';
+        if (hours >= 12 && hours < 16) return 'Afternoon (12pm-4pm)';
+        if (hours >= 16 && hours < 20) return 'Evening (4pm-8pm)';
+        if (hours >= 20 && hours < 24) return 'Night (8pm-12am)';
+        return 'Midnight (12am-5am)';
       } catch {
-        return '7. Unknown Time';
+        return 'Unknown Time';
       }
     };
 

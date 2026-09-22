@@ -1,7 +1,9 @@
 export const CUSTOM_TIME_RANGE = '__CUSTOM_TIME_RANGE__';
 
 export const parseTimeToMinutes = (value) => {
-  const raw = String(value || '').trim();
+  const raw = String(value || '')
+    .trim()
+    .replace(/\s*o'clock\s*/gi, ':00 ');
   if (!raw || raw.toLowerCase() === 'unknown') return null;
 
   const match = raw.match(/(?:T|\s|^)(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
