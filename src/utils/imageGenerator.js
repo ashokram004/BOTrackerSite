@@ -11,6 +11,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
     const RED = '#f87171';
     const ACCENT = '#f5a623';
     const ORANGE_STRIP = 'rgba(245, 131, 32, 0.78)';
+    const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
     const formatCurrency = (val) => {
       if (!Number.isFinite(Number(val))) return '$0';
@@ -183,7 +184,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
     const drawTable = (x, y, w, h, title, cols, rawDataRows, isFmtLang = false, isTheater = false) => {
       drawGlassPanel(x, y, w, h, 16);
       ctx.textAlign = 'left';
-      ctx.fillStyle = TEXT_BRIGHT;
+      ctx.fillStyle = ACCENT;
       ctx.font = 'bold 36px Arial, Helvetica, sans-serif';
       ctx.fillText(title, x + 35, y + 35);
 
@@ -200,7 +201,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
       ctx.stroke();
 
       // Headers
-      ctx.fillStyle = MUTED;
+      ctx.fillStyle = TEXT_BRIGHT;
       ctx.font = 'bold 24px Arial, Helvetica, sans-serif';
       cols.forEach(c => {
         ctx.textAlign = c.align;
@@ -253,16 +254,11 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
           }
 
           if (c.key === 'name') {
-            color = isFmtLang ? ACCENT : TEXT_BRIGHT;
+            if (isTheater) val = removeTheaterCityPrefix(val);
             const nameLimit = isTheater ? 30 : 32;
             if (val.length > nameLimit) val = val.substring(0, nameLimit - 3) + "...";
-            if (val.includes('Remaining')) color = MUTED;
-          } else if (c.key === 'gross') {
-            color = TEXT_BRIGHT;
-          } else if (c.key === 'occ') {
-            color = TEXT_BRIGHT;
           } else if (c.key === 'dgross') {
-            if (val === "") color = MUTED; 
+            if (val === "") color = MUTED;
             else if (val.startsWith('+')) color = GREEN;
             else if (val.startsWith('-')) color = RED;
           }
@@ -295,12 +291,12 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
       { name: 'Δ Gross', key: 'dgross', pos: 40, align: 'right' }
     ];
 
-    drawTable(PAD, r2_y, col_w, fl_h, "Format Distribution", standardCols, tables.formats, true, false);
-    drawTable(PAD + col_w + 40, r2_y, col_w, fl_h, "Language Distribution", standardCols, tables.languages, true, false);
+    drawTable(PAD, r2_y, col_w, fl_h, "Format Breakdown", standardCols, tables.formats, true, false);
+    drawTable(PAD + col_w + 40, r2_y, col_w, fl_h, "Language Breakdown", standardCols, tables.languages, true, false);
 
     const r3_y = r2_y + fl_h + 40;
-    drawTable(PAD, r3_y, col_w, st_h, "Top 15 States", standardCols, tables.states, false, false);
-    drawTable(PAD + col_w + 40, r3_y, col_w, st_h, "Top 15 Theaters", standardCols, tables.theaters, false, true);
+    drawTable(PAD, r3_y, col_w, st_h, "Top States", standardCols, tables.states, false, false);
+    drawTable(PAD + col_w + 40, r3_y, col_w, st_h, "Top Theatres", standardCols, tables.theaters, false, true);
 
     // --- FOOTER ---
     const footer_y = r3_y + st_h + 40;
@@ -387,8 +383,10 @@ export const generateIndiaImageReport = async ({
       ];
     };
 
-    const rowsForTable = (rows) => rows.map((row) => ({
-      name: String(row.name || 'Unknown'),
+    const rowsForTable = (rows, stripSortPrefix = false) => rows.map((row) => ({
+      name: stripSortPrefix
+        ? String(row.name || 'Unknown').replace(/^\d+\.\s*/, '')
+        : String(row.name || 'Unknown'),
       shows: formatNumberINR(row.shows),
       booked: formatNumberINR(row.booked),
       gross: formatINR(row.gross),
@@ -396,7 +394,7 @@ export const generateIndiaImageReport = async ({
     }));
 
     const reportLanguages = rowsForTable(languages);
-    const reportTimeCats = rowsForTable(timeCats);
+    const reportTimeCats = rowsForTable(timeCats, true);
     const reportStates = rowsForTable(top15WithRemaining(states, 'States'));
     const reportCities = rowsForTable(top15WithRemaining(cities, 'Cities'));
 
@@ -495,7 +493,7 @@ export const generateIndiaImageReport = async ({
       ctx.fillText(String(subValue), x + kpiWidth - 25, kpiY + 23);
       ctx.textAlign = 'left';
       ctx.fillStyle = COLORS.bright;
-      ctx.font = 'bold 65px Arial, Helvetica, sans-serif';
+      ctx.font = 'bold 58px Arial, Helvetica, sans-serif';
       ctx.fillText(String(value), x + 35, kpiY + 65);
     };
 
@@ -549,8 +547,8 @@ export const generateIndiaImageReport = async ({
 
     const columnWidth = (W - (2 * PAD) - 40) / 2;
     const row2Y = kpiY + 220;
-    drawTable(PAD, row2Y, columnWidth, r2Height, 'Language Distribution', reportLanguages);
-    drawTable(PAD + columnWidth + 40, row2Y, columnWidth, r2Height, 'Time of Day Analysis', reportTimeCats);
+    drawTable(PAD, row2Y, columnWidth, r2Height, 'Language Breakdown', reportLanguages);
+    drawTable(PAD + columnWidth + 40, row2Y, columnWidth, r2Height, 'Time of Day Breakdown', reportTimeCats);
     const row3Y = row2Y + r2Height + 40;
     drawTable(PAD, row3Y, columnWidth, r3Height, 'Top States', reportStates);
     drawTable(PAD + columnWidth + 40, row3Y, columnWidth, r3Height, 'Top Cities', reportCities);

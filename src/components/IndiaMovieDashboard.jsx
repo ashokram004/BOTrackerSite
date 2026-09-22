@@ -124,6 +124,8 @@ export const IndiaMovieDashboard = ({
   // State / City / Theatre expansion states
   const [showAllStates, setShowAllStates] = useState(false);
   const [showAllCities, setShowAllCities] = useState(false);
+  const [showAllTimeCategories, setShowAllTimeCategories] = useState(false);
+  const [showAllDemandTiers, setShowAllDemandTiers] = useState(false);
   const [showAllTheatres, setShowAllTheatres] = useState(false);
   const [showAllLedger, setShowAllLedger] = useState(false);
 
@@ -492,7 +494,8 @@ export const IndiaMovieDashboard = ({
       });
       const link = document.createElement('a');
       link.href = dataUrl;
-      link.download = `BoxOffice_India_${movieName.replace(/[^a-z0-9]+/gi, '_')}_${showDate}.png`;
+      const filePart = (value) => String(value || 'unknown').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+      link.download = `${filePart(movieName)}_India_${filePart(showDate)}.png`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -557,7 +560,9 @@ export const IndiaMovieDashboard = ({
               (row, idx) => (
                 <tr key={`${title}-${row.name || idx}`}>
                   <td style={{ width: '25%' }}>
-                    {row.name || 'Unknown'}
+                    {title === 'Time of Day Breakdown'
+                      ? String(row.name || 'Unknown').replace(/^\d+\.\s*/, '')
+                      : row.name || 'Unknown'}
                   </td>
 
                   <td>
@@ -1007,12 +1012,12 @@ export const IndiaMovieDashboard = ({
 
         <div className="dashboard-row">
           {renderTable(
-            'Format Distribution',
+            'Format Breakdown',
             formatSummary
           )}
 
           {renderTable(
-            'Language Distribution',
+            'Language Breakdown',
             languageSummary
           )}
         </div>
@@ -1035,7 +1040,7 @@ export const IndiaMovieDashboard = ({
           )}
         </div>
 
-        <div className="summary-section" style={{ marginTop: '28px' }}>
+        <div className="summary-section" style={{ marginTop: '20px' }}>
           <h2>Territory Breakdown</h2>
 
           <div className="table-scroll" style={{ overflowX: 'auto', width: '100%' }}>
@@ -1110,14 +1115,30 @@ export const IndiaMovieDashboard = ({
           )}
         </div>
 
+        <div className="dashboard-row" style={{ marginTop: '20px' }}>
+          {renderTable(
+            'Time of Day Breakdown',
+            timeSummary,
+            showAllTimeCategories,
+            setShowAllTimeCategories
+          )}
+
+          {renderTable(
+            'Demand Tier Breakdown',
+            occTierSummary,
+            showAllDemandTiers,
+            setShowAllDemandTiers
+          )}
+        </div>
+
         <div
           className="summary-section"
           style={{
-            marginTop: '28px',
+            marginTop: '20px',
             marginBottom: '20px'
           }}
         >
-          <h2>Top Grossing Theatres</h2>
+          <h2>Theatre Breakdown</h2>
 
           <div
             className="table-scroll table-scroll-wide table-scroll-theatres"

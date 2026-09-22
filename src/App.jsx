@@ -15,7 +15,7 @@ import { LoadingState } from './components/LoadingState';
 import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
 import './App.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const REGION_META = {
@@ -314,6 +314,7 @@ function App() {
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showLiveUpdate, setShowLiveUpdate] = useState(false);
+  const liveUpdateSessionStartRef = useRef(Date.now());
   const [filters, setFilters] = useState({
     state: 'ALL',
     chain: 'ALL',
@@ -326,11 +327,29 @@ function App() {
   });
 
   useEffect(() => {
-    if (!lastLiveUpdate || selectedRegion !== 'usa') return undefined;
+    if (!lastLiveUpdate || selectedRegion !== 'usa') {
+      setShowLiveUpdate(false);
+      return undefined;
+    }
+
+    const updateTimestamp = Number(lastLiveUpdate);
+    if (!Number.isFinite(updateTimestamp) || updateTimestamp <= liveUpdateSessionStartRef.current) {
+      return undefined;
+    }
+
+    const expiresAt = Date.now() + 6000;
+    const hideIfExpired = () => {
+      if (Date.now() >= expiresAt) setShowLiveUpdate(false);
+    };
 
     setShowLiveUpdate(true);
-    const timeoutId = setTimeout(() => setShowLiveUpdate(false), 6000);
-    return () => clearTimeout(timeoutId);
+    const timeoutId = setTimeout(hideIfExpired, 6000);
+    document.addEventListener('visibilitychange', hideIfExpired);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('visibilitychange', hideIfExpired);
+    };
   }, [lastLiveUpdate, selectedRegion]);
 
   const allRows = useMemo(() => rawRows || [], [rawRows]);
@@ -488,7 +507,8 @@ function App() {
       const dataUrl = await generateImageReport(kpis, tables, metadata, selectedMovie?.name);
       const a = document.createElement('a');
       a.href = dataUrl;
-      a.download = `BoxOffice_${selectedRegion || 'usa'}_${diffMode}_report.png`;
+      const filePart = (value) => String(value || 'unknown').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+      a.download = `${filePart(selectedMovie?.name)}_${filePart(REGION_META[selectedRegion]?.label)}_${filePart(selectedDateValue)}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -612,22 +632,22 @@ function App() {
           <KPIGrid kpis={displayedKpis} />
 
           <div className="dashboard-row">
-            {displayedTables?.formats && <DataTable title="Format Distribution" data={displayedTables.formats} isFormat />}
-            {displayedTables?.languages && <DataTable title="Language Distribution" data={displayedTables.languages} isLanguage />}
+            {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat />}
+            {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage />}
           </div>
 
           <div className="dashboard-row">
-            {displayedTables?.states && <DataTable title="State Distribution" data={displayedTables.states} isState />}
-            {displayedTables?.theaters && <DataTable title="Top Theatres" data={displayedTables.theaters} isTheater />}
+            {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState />}
+            {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater />}
           </div>
 
           <div className="dashboard-row">
             <DataTable
-              title="Theatre Chain Distribution"
+              title="Theatre Chain Breakdown"
               data={displayedTables?.chains || []}
             />
             <DataTable
-              title="Time Of Day Analysis"
+              title="Time of Day Breakdown"
               data={displayedTables?.timeCats || []}
             />
           </div>

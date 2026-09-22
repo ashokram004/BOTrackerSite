@@ -43,7 +43,7 @@ const formatToIst = (timestamp) => {
 
 export const HistoryTable = ({ data }) => {
   const [showAll, setShowAll] = useState(false);
-  const rowLimit = 20;
+  const rowLimit = 10;
   const sorted = useMemo(() => {
     return [...(data || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [data]);
@@ -58,7 +58,7 @@ export const HistoryTable = ({ data }) => {
         </span>
       </h2>
 
-      <div className="table-scroll table-scroll-wide table-scroll-history" style={{ overflowX: 'auto', maxHeight: '400px' }}>
+      <div className="table-scroll table-scroll-wide table-scroll-history" style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
@@ -108,7 +108,7 @@ export const HistoryTable = ({ data }) => {
             className="toggle-btn"
           >
             {showAll
-              ? 'Show Top 20'
+              ? 'Show Top 10'
               : `Show Remaining ${(sorted.length - rowLimit).toLocaleString()} Snapshots`}
           </button>
         </div>

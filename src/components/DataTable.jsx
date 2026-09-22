@@ -19,6 +19,8 @@ const getOccupancyColor = (occ) => {
   return "#f87171";
 };
 
+const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
+
 export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheater }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 20;
@@ -57,7 +59,7 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
               return (
                 <tr key={i}>
                   <td className={nameClass}>
-                    {row.name}
+                    {isTheater ? removeTheaterCityPrefix(row.name) : row.name}
                   </td>
                   <td>{formatNumber(row.shows)}</td>
                   <td>{formatNumber(row.booked)}</td>

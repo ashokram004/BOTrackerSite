@@ -18,6 +18,8 @@ const getOccupancyColor = (occ) => {
   return '#f87171';
 };
 
+const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
+
 export const ShowsTable = ({ rows }) => {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
@@ -47,7 +49,7 @@ export const ShowsTable = ({ rows }) => {
     return copy;
   }, [rows, sortKey, sortDir]);
 
-  const rowLimit = 20;
+  const rowLimit = 10;
   const visibleRows = showAll ? sorted : sorted.slice(0, rowLimit);
 
   const th = (key, label, align = 'left') => (
@@ -68,7 +70,7 @@ export const ShowsTable = ({ rows }) => {
         </span>
       </h2>
 
-      <div className="table-scroll table-scroll-wide table-scroll-shows" style={{ overflowX: 'auto', maxHeight: '600px' }}>
+      <div className="table-scroll table-scroll-wide table-scroll-shows" style={{ overflowX: 'auto' }}>
         <table>
           <thead>
             <tr>
@@ -93,7 +95,7 @@ export const ShowsTable = ({ rows }) => {
                 </td>
                 <td className="format-col" style={{ textAlign: 'left' }}>{r.format}</td>
                 <td className="language-col" style={{ textAlign: 'left' }}>{r.language}</td>
-                <td className="theater-col" style={{ textAlign: 'left' }}>{r.theater}</td>
+                <td className="theater-col" style={{ textAlign: 'left' }}>{removeTheaterCityPrefix(r.theater)}</td>
                 <td style={{ textAlign: 'left' }}>{r.time}</td>
                 <td style={{ color: 'var(--text-muted)', textAlign: 'left' }}>{r.timeCat}</td>
                 <td style={{ textAlign: 'left' }}>
@@ -126,7 +128,7 @@ export const ShowsTable = ({ rows }) => {
             className="toggle-btn"
           >
             {showAll
-              ? 'Show Top 20'
+              ? 'Show Top 10'
               : `Show Remaining ${(sorted.length - rowLimit).toLocaleString()} Shows`}
           </button>
         </div>

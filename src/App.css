@@ -1019,8 +1019,8 @@ select {
 
 .dashboard-row,
 .platform-grid {
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 20px;
+  margin-bottom: 20px;
 }
 
 .platform-grid {
