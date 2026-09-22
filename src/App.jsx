@@ -92,6 +92,16 @@ const loadShallowKeys = async (path) => {
 
 const hasKeys = (value) => value && typeof value === 'object' && Object.keys(value).length > 0;
 
+const getLatestDateKey = (value) => {
+  if (!value || typeof value !== 'object') return null;
+
+  const dateKeys = Object.keys(value).filter(
+    (key) => /^\d{4}-\d{2}-\d{2}$/.test(key) && value[key] !== null && value[key] !== undefined
+  );
+
+  return dateKeys.sort().at(-1) || null;
+};
+
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const loadNodeWithRetry = async (roots, attempts = 4) => {
@@ -179,10 +189,24 @@ function App() {
             id,
             name: value && typeof value === 'object' && value.name ? value.name : prettifySlug(id),
             raw: value
-          }))
-          .sort((a, b) => a.name.localeCompare(b.name));
+          }));
 
-        setMovies(movieList);
+        const moviesWithLatestDates = await Promise.all(
+          movieList.map(async (movie) => {
+            const shallowMovie = await loadShallowKeys(`${roots[0]}/${movie.id}`);
+            return {
+              ...movie,
+              latestDate: getLatestDateKey(shallowMovie) || getLatestDateKey(movie.raw)
+            };
+          })
+        );
+
+        moviesWithLatestDates.sort((a, b) => {
+          const latestDateComparison = String(b.latestDate || '').localeCompare(String(a.latestDate || ''));
+          return latestDateComparison || a.name.localeCompare(b.name);
+        });
+
+        setMovies(moviesWithLatestDates);
         setMovieError(null);
         setSelectedMovie((prev) => (prev && movieList.some((movie) => movie.id === prev.id) ? prev : null));
         if (!movieList.length) {
@@ -227,8 +251,7 @@ function App() {
 
         const dateKeys = Object.keys(raw)
           .filter((key) => key && raw[key] !== null && raw[key] !== undefined)
-          .sort()
-          .reverse();
+          .sort();
 
         setDates(dateKeys);
         setDateError(null);
