@@ -106,6 +106,7 @@ export const IndiaMovieDashboard = ({
 }) => {
   const [filters, setFilters] = useState({
     platform: 'ALL',
+    region: 'ALL',
     state: 'ALL',
     city: 'ALL',
     theater: 'ALL',
@@ -135,6 +136,18 @@ export const IndiaMovieDashboard = ({
           String(row.sourceType).toLowerCase() !== 'unknown'
       ),
     [rows]
+  );
+
+  const uniqueRegions = useMemo(
+    () =>
+      [
+        ...new Set(
+          usableRows
+            .filter((r) => (r.region || 'Unknown') !== 'Unknown')
+            .map((r) => r.region || 'Unknown')
+        )
+      ].sort(),
+    [usableRows]
   );
 
   const uniqueStates = useMemo(
@@ -187,7 +200,7 @@ export const IndiaMovieDashboard = ({
     [usableRows]
   );
 
-  const filteredCities = useMemo(() => {
+  const filteredRegions = useMemo(() => {
     let collection = usableRows;
 
     if (filters.state !== 'ALL') {
@@ -195,15 +208,35 @@ export const IndiaMovieDashboard = ({
     }
 
     return [
+      ...new Set(collection.map((r) => r.region || 'Unknown'))
+    ].filter((value) => value !== 'Unknown').sort();
+  }, [filters.state, usableRows]);
+
+  const filteredCities = useMemo(() => {
+    let collection = usableRows;
+
+    if (filters.state !== 'ALL') {
+      collection = collection.filter((r) => r.state === filters.state);
+    }
+
+    if (filters.region !== 'ALL') {
+      collection = collection.filter((r) => r.region === filters.region);
+    }
+
+    return [
       ...new Set(collection.map((r) => r.city || 'Unknown'))
     ].sort();
-  }, [filters.state, usableRows]);
+  }, [filters.region, filters.state, usableRows]);
 
   const filteredTheaters = useMemo(() => {
     let collection = usableRows;
 
     if (filters.state !== 'ALL') {
       collection = collection.filter((r) => r.state === filters.state);
+    }
+
+    if (filters.region !== 'ALL') {
+      collection = collection.filter((r) => r.region === filters.region);
     }
 
     if (filters.city !== 'ALL') {
@@ -213,7 +246,7 @@ export const IndiaMovieDashboard = ({
     return [
       ...new Set(collection.map((r) => r.theater || 'Unknown'))
     ].sort();
-  }, [filters.city, filters.state, usableRows]);
+  }, [filters.city, filters.region, filters.state, usableRows]);
 
   // =====================================================================
   // 🚀 OPTIMIZED SINGLE-PASS AGGREGATION
@@ -230,7 +263,7 @@ export const IndiaMovieDashboard = ({
     const venueSet = new Set();
     
     const maps = {
-      state: {}, city: {}, theater: {}, 
+      region: {}, state: {}, city: {}, theater: {},
       format: {}, language: {}, timeCat: {}, occTier: {}
     };
 
@@ -270,6 +303,7 @@ export const IndiaMovieDashboard = ({
 
       // --- FILTERING ---
       if (filters.platform !== 'ALL' && updatedRow.sourceType !== filters.platform) continue;
+      if (filters.region !== 'ALL' && updatedRow.region !== filters.region) continue;
       if (filters.state !== 'ALL' && updatedRow.state !== filters.state) continue;
       if (filters.city !== 'ALL' && updatedRow.city !== filters.city) continue;
       if (filters.theater !== 'ALL' && updatedRow.theater !== filters.theater) continue;
@@ -319,6 +353,7 @@ export const IndiaMovieDashboard = ({
         maps[mapKey][key].gross += gross;
       };
 
+      addToMap('region', updatedRow.region);
       addToMap('state', updatedRow.state);
       addToMap('city', updatedRow.city);
       addToMap('theater', updatedRow.theater);
@@ -334,6 +369,38 @@ export const IndiaMovieDashboard = ({
       occupancy: item.total > 0 ? (item.booked / item.total) * 100 : 0
     })).sort((a, b) => b.gross - a.gross);
 
+    const regionSummary = formatTable(maps.region);
+    const regionStateSummary = Object.values(
+      filtered.reduce((acc, row) => {
+        const regionKey = row.region || 'Unknown';
+        const stateKey = row.state || 'Unknown';
+        const composite = `${regionKey}::${stateKey}`;
+
+        if (!acc[composite]) {
+          acc[composite] = {
+            region: regionKey,
+            state: stateKey,
+            shows: 0,
+            total: 0,
+            booked: 0,
+            gross: 0
+          };
+        }
+
+        acc[composite].shows += 1;
+        acc[composite].total += Number(row.total || 0);
+        acc[composite].booked += Number(row.booked || 0);
+        acc[composite].gross += Number(row.gross || 0);
+
+        return acc;
+      }, {})
+    )
+      .map((row) => ({
+        ...row,
+        occupancy: row.total > 0 ? (row.booked / row.total) * 100 : 0
+      }))
+      .sort((a, b) => b.gross - a.gross);
+
     return {
       filteredRows: filtered,
       totalGross,
@@ -344,7 +411,9 @@ export const IndiaMovieDashboard = ({
       houseFullShows,
       occupancy: totalTickets > 0 ? (totalBooked / totalTickets) * 100 : 0,
       sourceBuckets: Object.values(sources),
+      regionSummary,
       stateSummary: formatTable(maps.state),
+      regionStateSummary,
       citySummary: formatTable(maps.city),
       theatreSummary: formatTable(maps.theater),
       formatSummary: formatTable(maps.format),
@@ -355,11 +424,13 @@ export const IndiaMovieDashboard = ({
   }, [usableRows, filters]);
 
   // Destructure for the JSX to use
-  const { 
+  const {
     filteredRows, totalGross, totalBooked, totalTickets, totalVenues, fastFillingShows, houseFullShows, occupancy,
-    sourceBuckets, stateSummary, citySummary, theatreSummary, formatSummary, 
-    languageSummary, timeSummary, occTierSummary 
+    sourceBuckets, regionSummary, stateSummary, regionStateSummary, citySummary, theatreSummary, formatSummary,
+    languageSummary, timeSummary, occTierSummary
   } = stats;
+
+  const [showAllRegionState, setShowAllRegionState] = useState(false);
 
   const sortedLedgerRows = useMemo(
     () => [...filteredRows].sort((a, b) => Number(b.gross || 0) - Number(a.gross || 0)),
@@ -668,6 +739,7 @@ export const IndiaMovieDashboard = ({
                     setFilters((prev) => ({
                       ...prev,
                       state: e.target.value,
+                      region: e.target.value === 'ALL' ? 'ALL' : prev.region,
                       city: 'ALL',
                       theater: 'ALL'
                     }))
@@ -683,6 +755,38 @@ export const IndiaMovieDashboard = ({
                       value={state}
                     >
                       {state}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div className="filter-label">
+                  Territory
+                </div>
+
+                <select
+                  className="filter-select"
+                  value={filters.region}
+                  onChange={(e) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      region: e.target.value,
+                      city: 'ALL',
+                      theater: 'ALL'
+                    }))
+                  }
+                >
+                  <option value="ALL">
+                    All Territories
+                  </option>
+
+                  {filteredRegions.map((region) => (
+                    <option
+                      key={region}
+                      value={region}
+                    >
+                      {region}
                     </option>
                   ))}
                 </select>
@@ -923,7 +1027,7 @@ export const IndiaMovieDashboard = ({
           )}
 
           {renderTable(
-            'Top Cities',
+            'City Breakdown',
             citySummary,
             showAllCities,
             setShowAllCities,
@@ -931,21 +1035,85 @@ export const IndiaMovieDashboard = ({
           )}
         </div>
 
-        <div className="dashboard-row">
-          {renderTable(
-            'Time of Day Analysis',
-            timeSummary
-          )}
+        <div className="summary-section" style={{ marginTop: '28px' }}>
+          <h2>Territory Breakdown</h2>
 
-          {renderTable(
-            'Demand Tiers',
-            occTierSummary
+          <div className="table-scroll" style={{ overflowX: 'auto', width: '100%' }}>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: '22%' }}>Territory</th>
+                  <th style={{ width: '22%' }}>State</th>
+                  <th>Shows</th>
+                  <th>Tickets</th>
+                  <th>Gross</th>
+                  <th>Occ %</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {(showAllRegionState ? regionStateSummary : regionStateSummary.slice(0, 10)).map((row, idx) => (
+                  <tr key={`${row.region || 'region'}-${row.state || 'state'}-${idx}`}>
+                    <td style={{ width: '22%' }}>{row.region || 'Unknown'}</td>
+                    <td style={{ width: '22%' }}>{row.state || 'Unknown'}</td>
+                    <td>{formatNumber(row.shows || 0)}</td>
+                    <td>{formatNumber(row.booked || 0)}</td>
+                    <td className="gross-val">{formatRupee(row.gross || 0)}</td>
+                    <td style={{ color: getOccupancyColor(row.occupancy || 0) }}>
+                      {Number(row.occupancy || 0).toFixed(1)}%
+                    </td>
+                  </tr>
+                ))}
+
+                {!regionStateSummary.length && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '18px', color: 'var(--text-muted)' }}>
+                      No territory data available.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {regionStateSummary.length > 10 && (
+            <div style={{ textAlign: 'center', paddingTop: '16px' }}>
+              <button
+                onClick={() => setShowAllRegionState((v) => !v)}
+                className="toggle-btn"
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  letterSpacing: '0.2px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06))';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 6px 18px rgba(0,0,0,0.25)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03))';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                }}
+              >
+                {showAllRegionState ? '↑ Show Top 10' : `↓ Show Remaining ${regionStateSummary.length - 10}`}
+              </button>
+            </div>
           )}
         </div>
 
         <div
           className="summary-section"
           style={{
+            marginTop: '28px',
             marginBottom: '20px'
           }}
         >
@@ -954,9 +1122,7 @@ export const IndiaMovieDashboard = ({
           <div
             className="table-scroll table-scroll-wide table-scroll-theatres"
             style={{
-              overflowX: 'auto',
-              maxHeight: '400px',
-              overflowY: 'auto'
+              overflowX: 'auto'
             }}
           >
             <table>
@@ -1091,9 +1257,7 @@ export const IndiaMovieDashboard = ({
           <div
             className="table-scroll table-scroll-wide table-scroll-ledger"
             style={{
-              overflowX: 'auto',
-              maxHeight: '600px',
-              overflowY: 'auto'
+              overflowX: 'auto'
             }}
           >
             <table>

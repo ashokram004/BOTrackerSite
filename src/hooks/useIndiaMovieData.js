@@ -92,6 +92,22 @@ const getSourceType = (row = {}) => {
   return 'Unknown';
 };
 
+const getRegionValue = (row = {}) => {
+  const candidate =
+    row.region ||
+    row.Region ||
+    row.market_region ||
+    row.marketRegion ||
+    row.region_name ||
+    row.regionName ||
+    row.zone ||
+    row.Zone ||
+    '';
+
+  const value = String(candidate || '').trim();
+  return value || 'Unknown';
+};
+
 const isIndiaRowCandidate = (row = {}) => {
   if (!row || typeof row !== 'object' || Array.isArray(row)) return false;
   const keyList = ['state', 'city', 'venue', 'theater', 'theatre', 'venue_name', 'normalized_show_time', 'show_time', 'time', 'booked_gross', 'gross', 'total_tickets', 'total', 'booked_tickets', 'booked', 'bms_sid', 'district_sid', 'sourceType', 'source', 'source_type'];
@@ -124,6 +140,7 @@ const normalizeIndiaRow = (row = {}) => {
 
   return {
     id: row.id || `${row.venue || 'venue'}_${row.format || 'format'}_${timeValue}_${row.language || 'language'}`,
+    region: getRegionValue(row),
     state: row.state || row.State || 'Unknown',
     city: row.city || row.City || 'Unknown',
     theater: row.venue || row.theater || row.theatre || row.venue_name || 'Unknown',

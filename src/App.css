@@ -679,6 +679,9 @@ tr:hover td {
 }
 
 .toggle-btn {
+  display: inline-block;
+  margin-top: 8px;
+  margin-bottom: 8px;
   padding: 10px 22px;
   border: 1px solid rgba(255,255,255,0.15);
   border-radius: 8px;
