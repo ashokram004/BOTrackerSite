@@ -310,7 +310,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
     ctx.textAlign = 'center';
     ctx.fillStyle = MUTED;
     ctx.font = '28px Arial, Helvetica, sans-serif';
-    ctx.fillText(`@TheWkndCinema • Data from Fandango • Generated at ${metadata.lastUpdated} IST`, W / 2, footer_y + 30);
+    ctx.fillText('@TheWkndCinema • Data from Fandango • Excluding blocked seats.', W / 2, footer_y + 30);
 
     resolve(canvas.toDataURL("image/png"));
   });
@@ -465,7 +465,7 @@ export const generateIndiaImageReport = async ({
     ctx.fillText(`India Advance Sales • Show Date: ${showDate}`, PAD, PAD + 85);
     ctx.textAlign = 'right';
     ctx.fillStyle = COLORS.text;
-    ctx.fillText(`Report: ${lastUpdated} IST`, W - PAD, PAD + 40);
+    ctx.fillText(`Report: ${lastUpdated} IST`, W - PAD, PAD + 85);
     ctx.textAlign = 'left';
 
     ctx.beginPath();
@@ -562,7 +562,7 @@ export const generateIndiaImageReport = async ({
     ctx.textAlign = 'center';
     ctx.fillStyle = COLORS.muted;
     ctx.font = '28px Arial, Helvetica, sans-serif';
-    ctx.fillText('@TheWkndCinema • BookMyShow + District Analytics', W / 2, footerY + 30);
+    ctx.fillText('@TheWkndCinema • BookMyShow + District Analytics • Including blocked seats.', W / 2, footerY + 30);
     resolve(canvas.toDataURL('image/png'));
   });
 };

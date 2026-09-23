@@ -685,7 +685,7 @@ function App() {
           )}
 
           <div className="footer">
-            @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Fandango
+            @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Fandango • Excluding blocked seats.
           </div>
         </div>
         </div>

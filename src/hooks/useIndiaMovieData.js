@@ -72,7 +72,7 @@ const formatIstDate = (value) => {
     minute: '2-digit',
     second: '2-digit',
     hour12: true
-  });
+  }).replace(/\s(am|pm)/i, (match) => match.toUpperCase());
 };
 
 const getSourceType = (row = {}) => {

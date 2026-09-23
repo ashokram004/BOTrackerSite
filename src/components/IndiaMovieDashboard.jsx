@@ -1493,17 +1493,7 @@ export const IndiaMovieDashboard = ({
         </div>
 
         <div className="footer">
-          @TheWkndCinema • BookMyShow + District Analytics •
-          Generated{' '}
-          {new Date().toLocaleString('en-IN', {
-            timeZone: 'Asia/Kolkata',
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          })}
+          @TheWkndCinema • BookMyShow + District Data • Including blocked seats.
         </div>
       </div>
     </div>
