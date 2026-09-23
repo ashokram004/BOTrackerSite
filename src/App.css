@@ -1053,6 +1053,17 @@ table {
   font-size: 12px;
 }
 
+.india-territory-table th,
+.india-territory-table td {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.india-territory-table .territory-total-row td {
+  font-weight: 700;
+  color: #ffffff;
+}
+
 .table-scroll {
   width: 100%;
   min-width: 0;

@@ -470,6 +470,68 @@ export const IndiaMovieDashboard = ({
     }
   ];
 
+  const groupedStates = useMemo(() => {
+    const groups = new Map();
+    const consideredStates = new Map([
+      ['andhra pradesh', 'Andhra Pradesh'],
+      ['telangana', 'Telangana'],
+      ['karnataka', 'Karnataka'],
+      ['tamil nadu', 'Tamil Nadu'],
+      ['kerala', 'Kerala']
+    ]);
+
+    regionStateSummary.forEach((row) => {
+      const rawState = String(row.state || '').trim();
+      const state = consideredStates.get(rawState.toLowerCase()) || 'Rest of India';
+      if (!groups.has(state)) {
+        groups.set(state, {
+          state,
+          rows: [],
+          shows: 0,
+          total: 0,
+          booked: 0,
+          gross: 0
+        });
+      }
+
+      const group = groups.get(state);
+      const territory = state === 'Rest of India' ? 'Rest of India' : (row.region || 'Unknown');
+      let groupedRow = group.rows.find((item) => item.region === territory);
+      if (!groupedRow) {
+        groupedRow = {
+          region: territory,
+          shows: 0,
+          total: 0,
+          booked: 0,
+          gross: 0
+        };
+        group.rows.push(groupedRow);
+      }
+
+      groupedRow.shows += Number(row.shows || 0);
+      groupedRow.total += Number(row.total || 0);
+      groupedRow.booked += Number(row.booked || 0);
+      groupedRow.gross += Number(row.gross || 0);
+      group.shows += Number(row.shows || 0);
+      group.total += Number(row.total || 0);
+      group.booked += Number(row.booked || 0);
+      group.gross += Number(row.gross || 0);
+    });
+
+    return [...groups.values()]
+      .map((group) => ({
+        ...group,
+        occupancy: group.total > 0 ? (group.booked / group.total) * 100 : 0,
+        rows: group.rows
+          .map((row) => ({
+            ...row,
+            occupancy: row.total > 0 ? (row.booked / row.total) * 100 : 0
+          }))
+          .sort((a, b) => b.gross - a.gross)
+      }))
+        .sort((a, b) => b.gross - a.gross);
+  }, [regionStateSummary]);
+
   const handleExportImage = async () => {
     if (isGeneratingImage) return;
 
@@ -1044,11 +1106,10 @@ export const IndiaMovieDashboard = ({
           <h2>Territory Breakdown</h2>
 
           <div className="table-scroll" style={{ overflowX: 'auto', width: '100%' }}>
-            <table>
+            <table className="india-territory-table">
               <thead>
                 <tr>
-                  <th style={{ width: '22%' }}>Territory</th>
-                  <th style={{ width: '22%' }}>State</th>
+                  <th style={{ width: '40%' }}>State / Territory</th>
                   <th>Shows</th>
                   <th>Tickets</th>
                   <th>Gross</th>
@@ -1057,22 +1118,44 @@ export const IndiaMovieDashboard = ({
               </thead>
 
               <tbody>
-                {(showAllRegionState ? regionStateSummary : regionStateSummary.slice(0, 10)).map((row, idx) => (
-                  <tr key={`${row.region || 'region'}-${row.state || 'state'}-${idx}`}>
-                    <td style={{ width: '22%' }}>{row.region || 'Unknown'}</td>
-                    <td style={{ width: '22%' }}>{row.state || 'Unknown'}</td>
-                    <td>{formatNumber(row.shows || 0)}</td>
-                    <td>{formatNumber(row.booked || 0)}</td>
-                    <td className="gross-val">{formatRupee(row.gross || 0)}</td>
-                    <td style={{ color: getOccupancyColor(row.occupancy || 0) }}>
-                      {Number(row.occupancy || 0).toFixed(1)}%
+                {(showAllRegionState ? groupedStates : groupedStates.slice(0, 10)).flatMap((group) => [
+                  <tr key={`${group.state}-header`}>
+                    <td colSpan={5} style={{
+                      padding: '10px 14px',
+                      background: 'rgba(148, 163, 184, 0.16)',
+                      color: 'var(--text-main)',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.04em'
+                    }}>
+                      {group.state}
+                    </td>
+                  </tr>,
+                  ...group.rows.map((row, idx) => (
+                    <tr key={`${group.state}-${row.region || 'territory'}-${idx}`}>
+                      <td style={{ width: '40%' }}>{row.region || 'Unknown'}</td>
+                      <td>{formatNumber(row.shows || 0)}</td>
+                      <td>{formatNumber(row.booked || 0)}</td>
+                      <td className="gross-val">{formatRupee(row.gross || 0)}</td>
+                      <td style={{ color: getOccupancyColor(row.occupancy || 0) }}>
+                        {Number(row.occupancy || 0).toFixed(1)}%
+                      </td>
+                    </tr>
+                  )),
+                  <tr key={`${group.state}-total`} className="territory-total-row">
+                    <td style={{ fontWeight: 700 }}>Total</td>
+                    <td style={{ fontWeight: 700 }}>{formatNumber(group.shows)}</td>
+                    <td style={{ fontWeight: 700 }}>{formatNumber(group.booked)}</td>
+                    <td style={{ fontWeight: 700 }}>{formatRupee(group.gross)}</td>
+                    <td style={{ fontWeight: 700 }}>
+                      {group.occupancy.toFixed(1)}%
                     </td>
                   </tr>
-                ))}
+                ])}
 
-                {!regionStateSummary.length && (
+                {!groupedStates.length && (
                   <tr>
-                    <td colSpan={6} style={{ textAlign: 'center', padding: '18px', color: 'var(--text-muted)' }}>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '18px', color: 'var(--text-muted)' }}>
                       No territory data available.
                     </td>
                   </tr>
@@ -1081,7 +1164,7 @@ export const IndiaMovieDashboard = ({
             </table>
           </div>
 
-          {regionStateSummary.length > 10 && (
+          {groupedStates.length > 10 && (
             <div style={{ textAlign: 'center', paddingTop: '16px' }}>
               <button
                 onClick={() => setShowAllRegionState((v) => !v)}
@@ -1109,7 +1192,7 @@ export const IndiaMovieDashboard = ({
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
                 }}
               >
-                {showAllRegionState ? '↑ Show Top 10' : `↓ Show Remaining ${regionStateSummary.length - 10}`}
+                {showAllRegionState ? '↑ Show Top 10 States' : `↓ Show Remaining ${groupedStates.length - 10} States`}
               </button>
             </div>
           )}
