@@ -1218,6 +1218,29 @@ tr:hover td {
     padding: 18px 12px 32px;
   }
 
+  .india-territory-table {
+    table-layout: fixed;
+  }
+
+  .india-territory-table th,
+  .india-territory-table td {
+    padding-left: 6px;
+    padding-right: 6px;
+    white-space: nowrap;
+  }
+
+  .india-territory-table th:first-child,
+  .india-territory-table td:first-child {
+    width: 28% !important;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .india-territory-table th:nth-child(n + 2),
+  .india-territory-table td:nth-child(n + 2) {
+    width: 18%;
+  }
+
   .dashboard-header-main,
   .dashboard-header-actions {
     align-items: stretch;
