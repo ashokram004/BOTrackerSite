@@ -87,6 +87,14 @@ const SOURCE_META = {
   }
 };
 
+const MERGE_CALCULATION_LABELS = {
+  bms: 'BOOKMYSHOW',
+  district: 'DISTRICT',
+  lower: 'LOWER',
+  higher: 'HIGHER',
+  average: 'AVERAGE'
+};
+
 const getSourceClass = (source = 'Unknown') => {
   if (source === 'Merged') return 'src-merge';
   if (source === 'BookMyShow') return 'src-bms';
@@ -106,6 +114,7 @@ export const IndiaMovieDashboard = ({
 }) => {
   const [filters, setFilters] = useState({
     platform: 'ALL',
+    mergeCalculation: 'existing',
     region: 'ALL',
     state: 'ALL',
     city: 'ALL',
@@ -139,6 +148,26 @@ export const IndiaMovieDashboard = ({
       ),
     [rows]
   );
+
+  const availableMergeCalculations = useMemo(() => {
+    const metrics = ['booked_gross', 'total_gross', 'booked_tickets', 'total_tickets'];
+    const modes = Object.keys(MERGE_CALCULATION_LABELS);
+
+    return modes.filter((mode) =>
+      usableRows.some((row) => {
+        if (row.sourceType !== 'Merged') return false;
+        const rawData = row.raw || row;
+
+        return metrics.some((metric) =>
+          Object.prototype.hasOwnProperty.call(rawData, `${mode}_${metric}`)
+        );
+      })
+    );
+  }, [usableRows]);
+
+  const activeMergeCalculation = availableMergeCalculations.includes(filters.mergeCalculation)
+    ? filters.mergeCalculation
+    : 'existing';
 
   const uniqueRegions = useMemo(
     () =>
@@ -301,7 +330,31 @@ export const IndiaMovieDashboard = ({
             : row.sourceType || row.source || rawData.source || 'Unknown';
 
       // Override the old sourceType with our accurate calculated one
-      const updatedRow = row.sourceType === sType ? row : { ...row, sourceType: sType };
+      let updatedRow = row.sourceType === sType ? row : { ...row, sourceType: sType };
+
+      if (sType === 'Merged' && activeMergeCalculation !== 'existing') {
+        const getSelectedMetric = (metric, fallback) => {
+          const value = rawData[`${activeMergeCalculation}_${metric}`];
+          if (value === undefined || value === null || value === '') return fallback;
+          const number = Number(value);
+          return Number.isFinite(number) ? number : fallback;
+        };
+
+        const booked = getSelectedMetric('booked_tickets', updatedRow.booked);
+        const total = getSelectedMetric('total_tickets', updatedRow.total);
+        const gross = getSelectedMetric('booked_gross', updatedRow.gross);
+        const occ = total > 0 ? (booked / total) * 100 : 0;
+
+        updatedRow = {
+          ...updatedRow,
+          booked,
+          total,
+          gross,
+          occ,
+          occTier: getOccTier(occ),
+          status: getOccTier(occ)
+        };
+      }
 
       // --- FILTERING ---
       if (filters.platform !== 'ALL' && updatedRow.sourceType !== filters.platform) continue;
@@ -761,6 +814,32 @@ export const IndiaMovieDashboard = ({
         {showFilters && (
           <div className="filter-panel">
             <div className="filter-grid">
+              {availableMergeCalculations.length > 0 && (
+                <div>
+                  <div className="filter-label">
+                    Merge Calculation
+                  </div>
+
+                  <select
+                    className="filter-select"
+                    value={activeMergeCalculation}
+                    onChange={(e) =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        mergeCalculation: e.target.value
+                      }))
+                    }
+                  >
+                    <option value="existing">DEFAULT</option>
+                    {availableMergeCalculations.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {MERGE_CALCULATION_LABELS[mode]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
                 <div className="filter-label">
                   Platform
