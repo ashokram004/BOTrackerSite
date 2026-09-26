@@ -484,8 +484,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     const makeBaseId = (r) => {
       const theater = (r.t_id || r.theater || r['Theater Name'] || r['Theater'] || '').trim().toLowerCase();
       const format = (normalizeFormat(r.format || r['Format']) || '').trim().toLowerCase();
-      const language = (r.language || r['Language'] || '').trim().toLowerCase();
-      return `${theater}_${format}_${language}`;
+      return `${theater}_${format}`;
     };
 
     const makeRowId = (r) => {
