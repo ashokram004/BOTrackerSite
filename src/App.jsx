@@ -316,12 +316,12 @@ function App() {
   const [showLiveUpdate, setShowLiveUpdate] = useState(false);
   const liveUpdateSessionStartRef = useRef(Date.now());
   const [filters, setFilters] = useState({
-    state: 'ALL',
-    chain: 'ALL',
-    theater: 'ALL',
-    format: 'ALL',
-    language: 'ALL',
-    timeCat: 'ALL',
+    state: [],
+    chain: [],
+    theater: [],
+    format: [],
+    language: [],
+    timeCat: [],
     timeStart: '',
     timeEnd: ''
   });
@@ -357,14 +357,17 @@ function App() {
   const filteredRows = useMemo(() => {
     return allRows.filter((r) => {
       if (r.is_extra || r.t_id === 'EXTRA') return false;
-      if (filters.state !== 'ALL' && r.state !== filters.state) return false;
-      if (filters.chain !== 'ALL' && r.chain !== filters.chain) return false;
-      if (filters.theater !== 'ALL' && r.theater !== filters.theater) return false;
-      if (filters.format !== 'ALL' && r.format !== filters.format) return false;
-      if (filters.language !== 'ALL' && r.language !== filters.language) return false;
-      if (filters.timeCat === CUSTOM_TIME_RANGE) {
-        if (!isTimeInRange(r.time, filters.timeStart, filters.timeEnd)) return false;
-      } else if (filters.timeCat !== 'ALL' && r.timeCat !== filters.timeCat) return false;
+      if (filters.state.length && !filters.state.includes(r.state)) return false;
+      if (filters.chain.length && !filters.chain.includes(r.chain)) return false;
+      if (filters.theater.length && !filters.theater.includes(r.theater)) return false;
+      if (filters.format.length && !filters.format.includes(r.format)) return false;
+      if (filters.language.length && !filters.language.includes(r.language)) return false;
+      const matchesTime = filters.timeCat.length === 0 || filters.timeCat.some((timeCategory) =>
+        timeCategory === CUSTOM_TIME_RANGE
+          ? isTimeInRange(r.time, filters.timeStart, filters.timeEnd)
+          : r.timeCat === timeCategory
+      );
+      if (!matchesTime) return false;
       return true;
     });
   }, [allRows, filters]);
@@ -495,7 +498,7 @@ function App() {
 
   const noFiltersSelected = Object.entries(filters).every(([key, value]) => {
     if (key === 'timeStart' || key === 'timeEnd') return value === '';
-    return value === 'ALL';
+    return Array.isArray(value) ? value.length === 0 : value === 'ALL';
   });
   const displayedKpis = noFiltersSelected ? kpis : filteredSummary.kpis;
   const displayedTables = noFiltersSelected ? tables : filteredSummary.tables;

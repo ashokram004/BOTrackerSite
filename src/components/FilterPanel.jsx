@@ -1,20 +1,6 @@
 import { useMemo } from 'react';
 import { TimeFilter } from './TimeFilter';
-
-const Select = ({ label, value, onChange, options }) => {
-  return (
-    <div>
-      <div className="filter-label">{label}</div>
-      <select className="filter-select" value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-};
+import { MultiSelectFilter } from './MultiSelectFilter';
 
 export const FilterPanel = ({
   rawRows,
@@ -43,54 +29,54 @@ export const FilterPanel = ({
 
     // dependent dropdown: theaters based on state + chain
     let filteredTheaters = rows;
-    if (filters.state !== 'ALL') filteredTheaters = filteredTheaters.filter((r) => r.state === filters.state);
-    if (filters.chain !== 'ALL') filteredTheaters = filteredTheaters.filter((r) => r.chain === filters.chain);
+    if (filters.state.length) filteredTheaters = filteredTheaters.filter((r) => filters.state.includes(r.state));
+    if (filters.chain.length) filteredTheaters = filteredTheaters.filter((r) => filters.chain.includes(r.chain));
     const theaters = uniq(filteredTheaters.map((r) => r.theater));
 
     return { states, chains, formats, languages, timeCats, theaters };
   }, [rawRows, filters.chain, filters.state]);
 
-  const opt = (list, labelAll) => [
-    { value: 'ALL', label: labelAll },
-    ...list.map((v) => ({ value: v, label: v }))
-  ];
-
   return (
-    <div className={`filter-panel ${!showFilters ? 'hidden' : ''}`}>
+    <div className={`filter-panel multi-select-panel ${!showFilters ? 'hidden' : ''}`}>
       <div className="filter-grid">
-        <Select
+        <MultiSelectFilter
           label="State"
-          value={filters.state}
-          onChange={(v) => setFilters((p) => ({ ...p, state: v }))}
-          options={opt(uniqueValues.states, 'All States')}
+          allLabel="All States"
+          selectedValues={filters.state}
+          onChange={(state) => setFilters((previous) => ({ ...previous, state, theater: [] }))}
+          options={uniqueValues.states.map((value) => ({ value, label: value }))}
         />
 
-        <Select
+        <MultiSelectFilter
           label="Theatre Chain"
-          value={filters.chain}
-          onChange={(v) => setFilters((p) => ({ ...p, chain: v }))}
-          options={opt(uniqueValues.chains, 'All Chains')}
+          allLabel="All Chains"
+          selectedValues={filters.chain}
+          onChange={(chain) => setFilters((previous) => ({ ...previous, chain, theater: [] }))}
+          options={uniqueValues.chains.map((value) => ({ value, label: value }))}
         />
 
-        <Select
+        <MultiSelectFilter
           label="Theatre"
-          value={filters.theater}
-          onChange={(v) => setFilters((p) => ({ ...p, theater: v }))}
-          options={opt(uniqueValues.theaters, 'All Theatres')}
+          allLabel="All Theatres"
+          selectedValues={filters.theater}
+          onChange={(theater) => setFilters((previous) => ({ ...previous, theater }))}
+          options={uniqueValues.theaters.map((value) => ({ value, label: value }))}
         />
 
-        <Select
+        <MultiSelectFilter
           label="Format"
-          value={filters.format}
-          onChange={(v) => setFilters((p) => ({ ...p, format: v }))}
-          options={opt(uniqueValues.formats, 'All Formats')}
+          allLabel="All Formats"
+          selectedValues={filters.format}
+          onChange={(format) => setFilters((previous) => ({ ...previous, format }))}
+          options={uniqueValues.formats.map((value) => ({ value, label: value }))}
         />
 
-        <Select
+        <MultiSelectFilter
           label="Language"
-          value={filters.language}
-          onChange={(v) => setFilters((p) => ({ ...p, language: v }))}
-          options={opt(uniqueValues.languages, 'All Languages')}
+          allLabel="All Languages"
+          selectedValues={filters.language}
+          onChange={(language) => setFilters((previous) => ({ ...previous, language }))}
+          options={uniqueValues.languages.map((value) => ({ value, label: value }))}
         />
 
         <TimeFilter

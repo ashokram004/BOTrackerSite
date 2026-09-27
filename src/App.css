@@ -573,6 +573,21 @@ tr:hover td {
   overflow: hidden;
 }
 
+.filter-panel.india-filter-panel {
+  overflow: visible;
+}
+
+.filter-panel.multi-select-panel {
+  position: relative;
+  z-index: 100;
+  overflow: visible;
+}
+
+.filter-panel.multi-select-panel.hidden {
+  z-index: auto;
+  overflow: hidden;
+}
+
 .filter-panel.hidden {
   max-height: 0;
   opacity: 0;
@@ -615,6 +630,101 @@ tr:hover td {
 .filter-select option {
   background: #0f172a;
   color: white;
+}
+
+.multi-select-filter {
+  position: relative;
+  min-width: 0;
+}
+
+.multi-select-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.multi-select-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.multi-select-trigger > span:last-child {
+  color: var(--text-muted);
+}
+
+.multi-select-filter details[open] {
+  position: relative;
+  z-index: 110;
+}
+
+.multi-select-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  min-width: 220px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 7px;
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-panel);
+}
+
+.filter-select-shell {
+  position: relative;
+}
+
+.filter-select-shell select {
+  appearance: none;
+  padding-right: 34px;
+}
+
+.filter-select-arrow {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.multi-select-option,
+.multi-select-action {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.multi-select-option:hover,
+.multi-select-action:hover {
+  background: var(--surface-soft);
+}
+
+.multi-select-option input {
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.multi-select-option span {
+  overflow-wrap: anywhere;
 }
 
 .time-filter-custom {

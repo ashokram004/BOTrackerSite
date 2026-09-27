@@ -1,7 +1,8 @@
 import { CUSTOM_TIME_RANGE } from '../utils/timeFilter';
+import { MultiSelectFilter } from './MultiSelectFilter';
 
 export const TimeFilter = ({ timeCategories, filters, setFilters }) => {
-  const isCustom = filters.timeCat === CUSTOM_TIME_RANGE;
+  const isCustom = filters.timeCat.includes(CUSTOM_TIME_RANGE);
 
   const updateTime = (changes) => {
     setFilters((previous) => ({ ...previous, ...changes }));
@@ -9,18 +10,17 @@ export const TimeFilter = ({ timeCategories, filters, setFilters }) => {
 
   return (
     <div className={isCustom ? 'time-filter time-filter-custom' : 'time-filter'}>
-      <div className="filter-label">Time Of Day</div>
-      <select
-        className="filter-select"
-        value={filters.timeCat}
-        onChange={(event) => updateTime({ timeCat: event.target.value })}
-      >
-        <option value="ALL">All Times</option>
-        {timeCategories.map((category) => (
-          <option key={category} value={category}>{category}</option>
-        ))}
-        <option value={CUSTOM_TIME_RANGE}>Custom Time Range</option>
-      </select>
+      <MultiSelectFilter
+        label="Time Of Day"
+        allLabel="All Times"
+        options={[
+          ...timeCategories.map((category) => ({ value: category, label: category })),
+          { value: CUSTOM_TIME_RANGE, label: 'Custom Time Range' }
+        ]}
+        selectedValues={filters.timeCat}
+        onChange={(timeCat) => updateTime({ timeCat })}
+        exclusiveValues={[CUSTOM_TIME_RANGE]}
+      />
 
       {isCustom && (
         <div className="custom-time-fields">

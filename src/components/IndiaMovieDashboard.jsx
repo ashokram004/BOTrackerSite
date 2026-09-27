@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
+import { MultiSelectFilter } from './MultiSelectFilter';
 import { CUSTOM_TIME_RANGE, isTimeInRange } from '../utils/timeFilter';
 
 const formatRupee = (value) => {
@@ -69,6 +70,9 @@ const getOccTier = (occ = 0) => {
   return 'Available';
 };
 
+const matchesSelection = (selectedValues, value) =>
+  selectedValues.length === 0 || selectedValues.includes(value);
+
 const getBadgeClass = (tier = 'Available') => {
   if (tier === 'Sold Out') return 'b-soldout';
   if (tier === 'Almost Full') return 'b-almost';
@@ -120,18 +124,18 @@ export const IndiaMovieDashboard = ({
   lastUpdated = 'N/A'
 }) => {
   const [filters, setFilters] = useState({
-    platform: 'ALL',
+    platform: [],
     mergeCalculation: 'bms',
-    region: 'ALL',
-    state: 'ALL',
-    city: 'ALL',
-    theater: 'ALL',
-    format: 'ALL',
-    language: 'ALL',
-    timeCat: 'ALL',
+    region: [],
+    state: [],
+    city: [],
+    theater: [],
+    format: [],
+    language: [],
+    timeCat: [],
     timeStart: '',
     timeEnd: '',
-    occTier: 'ALL'
+    occTier: []
   });
 
   const [showFilters, setShowFilters] = useState(false);
@@ -246,8 +250,8 @@ export const IndiaMovieDashboard = ({
   const filteredRegions = useMemo(() => {
     let collection = usableRows;
 
-    if (filters.state !== 'ALL') {
-      collection = collection.filter((r) => r.state === filters.state);
+    if (filters.state.length) {
+      collection = collection.filter((r) => filters.state.includes(r.state));
     }
 
     return [
@@ -258,12 +262,12 @@ export const IndiaMovieDashboard = ({
   const filteredCities = useMemo(() => {
     let collection = usableRows;
 
-    if (filters.state !== 'ALL') {
-      collection = collection.filter((r) => r.state === filters.state);
+    if (filters.state.length) {
+      collection = collection.filter((r) => filters.state.includes(r.state));
     }
 
-    if (filters.region !== 'ALL') {
-      collection = collection.filter((r) => r.region === filters.region);
+    if (filters.region.length) {
+      collection = collection.filter((r) => filters.region.includes(r.region));
     }
 
     return [
@@ -274,16 +278,16 @@ export const IndiaMovieDashboard = ({
   const filteredTheaters = useMemo(() => {
     let collection = usableRows;
 
-    if (filters.state !== 'ALL') {
-      collection = collection.filter((r) => r.state === filters.state);
+    if (filters.state.length) {
+      collection = collection.filter((r) => filters.state.includes(r.state));
     }
 
-    if (filters.region !== 'ALL') {
-      collection = collection.filter((r) => r.region === filters.region);
+    if (filters.region.length) {
+      collection = collection.filter((r) => filters.region.includes(r.region));
     }
 
-    if (filters.city !== 'ALL') {
-      collection = collection.filter((r) => r.city === filters.city);
+    if (filters.city.length) {
+      collection = collection.filter((r) => filters.city.includes(r.city));
     }
 
     return [
@@ -380,17 +384,20 @@ export const IndiaMovieDashboard = ({
       };
 
       // --- FILTERING ---
-      if (filters.platform !== 'ALL' && updatedRow.sourceType !== filters.platform) continue;
-      if (filters.region !== 'ALL' && updatedRow.region !== filters.region) continue;
-      if (filters.state !== 'ALL' && updatedRow.state !== filters.state) continue;
-      if (filters.city !== 'ALL' && updatedRow.city !== filters.city) continue;
-      if (filters.theater !== 'ALL' && updatedRow.theater !== filters.theater) continue;
-      if (filters.format !== 'ALL' && updatedRow.format !== filters.format) continue;
-      if (filters.language !== 'ALL' && updatedRow.language !== filters.language) continue;
-      if (filters.timeCat === CUSTOM_TIME_RANGE) {
-        if (!isTimeInRange(updatedRow.time, filters.timeStart, filters.timeEnd)) continue;
-      } else if (filters.timeCat !== 'ALL' && updatedRow.timeCat !== filters.timeCat) continue;
-      if (filters.occTier !== 'ALL' && updatedRow.occTier !== filters.occTier) continue;
+      if (!matchesSelection(filters.platform, updatedRow.sourceType)) continue;
+      if (!matchesSelection(filters.region, updatedRow.region)) continue;
+      if (!matchesSelection(filters.state, updatedRow.state)) continue;
+      if (!matchesSelection(filters.city, updatedRow.city)) continue;
+      if (!matchesSelection(filters.theater, updatedRow.theater)) continue;
+      if (!matchesSelection(filters.format, updatedRow.format)) continue;
+      if (!matchesSelection(filters.language, updatedRow.language)) continue;
+      const matchesTime = filters.timeCat.length === 0 || filters.timeCat.some((timeCategory) =>
+        timeCategory === CUSTOM_TIME_RANGE
+          ? isTimeInRange(updatedRow.time, filters.timeStart, filters.timeEnd)
+          : updatedRow.timeCat === timeCategory
+      );
+      if (!matchesTime) continue;
+      if (!matchesSelection(filters.occTier, updatedRow.occTier)) continue;
 
       filtered.push(updatedRow);
 
@@ -876,7 +883,7 @@ export const IndiaMovieDashboard = ({
         />
 
         {showFilters && (
-          <div className="filter-panel">
+          <div className="filter-panel india-filter-panel multi-select-panel">
             <div className="filter-grid">
               {mergeCalculationOptions.length > 0 && (
                 <div>
@@ -884,245 +891,87 @@ export const IndiaMovieDashboard = ({
                     Merge Calculation
                   </div>
 
-                  <select
-                    className="filter-select"
-                    value={activeMergeCalculation}
-                    onChange={(e) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        mergeCalculation: e.target.value
-                      }))
-                    }
-                  >
-                    {mergeCalculationOptions.map((mode) => (
-                      <option key={mode} value={mode}>
-                        {MERGE_CALCULATION_LABELS[mode]}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="filter-select-shell">
+                    <select
+                      className="filter-select"
+                      value={activeMergeCalculation}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          mergeCalculation: e.target.value
+                        }))
+                      }
+                    >
+                      {mergeCalculationOptions.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {MERGE_CALCULATION_LABELS[mode]}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="filter-select-arrow" aria-hidden="true">▾</span>
+                  </div>
                 </div>
               )}
 
-              <div>
-                <div className="filter-label">
-                  Platform
-                </div>
+              <MultiSelectFilter
+                label="Platform"
+                allLabel="All Platforms"
+                options={[
+                  { value: 'BookMyShow', label: 'BookMyShow' },
+                  { value: 'District', label: 'District' },
+                  { value: 'Merged', label: 'Merged' }
+                ]}
+                selectedValues={filters.platform}
+                onChange={(platform) => setFilters((prev) => ({ ...prev, platform }))}
+              />
 
-                <select
-                  className="filter-select"
-                  value={filters.platform}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      platform: e.target.value
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Platforms
-                  </option>
+              <MultiSelectFilter
+                label="State"
+                allLabel="All States"
+                options={uniqueStates.map((state) => ({ value: state, label: state }))}
+                selectedValues={filters.state}
+                onChange={(state) => setFilters((prev) => ({ ...prev, state, region: [], city: [], theater: [] }))}
+              />
 
-                  <option value="BookMyShow">
-                    BookMyShow
-                  </option>
+              <MultiSelectFilter
+                label="Territory"
+                allLabel="All Territories"
+                options={filteredRegions.map((region) => ({ value: region, label: region }))}
+                selectedValues={filters.region}
+                onChange={(region) => setFilters((prev) => ({ ...prev, region, city: [], theater: [] }))}
+              />
 
-                  <option value="District">
-                    District
-                  </option>
+              <MultiSelectFilter
+                label="City"
+                allLabel="All Cities"
+                options={filteredCities.map((city) => ({ value: city, label: city }))}
+                selectedValues={filters.city}
+                onChange={(city) => setFilters((prev) => ({ ...prev, city, theater: [] }))}
+              />
 
-                  <option value="Merged">
-                    Merged
-                  </option>
-                </select>
-              </div>
+              <MultiSelectFilter
+                label="Theatre"
+                allLabel="All Theatres"
+                options={filteredTheaters.map((theater) => ({ value: theater, label: theater }))}
+                selectedValues={filters.theater}
+                onChange={(theater) => setFilters((prev) => ({ ...prev, theater }))}
+              />
 
-              <div>
-                <div className="filter-label">
-                  State
-                </div>
+              <MultiSelectFilter
+                label="Language"
+                allLabel="All Languages"
+                options={uniqueLanguages.map((language) => ({ value: language, label: language }))}
+                selectedValues={filters.language}
+                onChange={(language) => setFilters((prev) => ({ ...prev, language }))}
+              />
 
-                <select
-                  className="filter-select"
-                  value={filters.state}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      state: e.target.value,
-                      region: e.target.value === 'ALL' ? 'ALL' : prev.region,
-                      city: 'ALL',
-                      theater: 'ALL'
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All States
-                  </option>
-
-                  {uniqueStates.map((state) => (
-                    <option
-                      key={state}
-                      value={state}
-                    >
-                      {state}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="filter-label">
-                  Territory
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.region}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      region: e.target.value,
-                      city: 'ALL',
-                      theater: 'ALL'
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Territories
-                  </option>
-
-                  {filteredRegions.map((region) => (
-                    <option
-                      key={region}
-                      value={region}
-                    >
-                      {region}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="filter-label">
-                  City
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.city}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      city: e.target.value,
-                      theater: 'ALL'
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Cities
-                  </option>
-
-                  {filteredCities.map((city) => (
-                    <option
-                      key={city}
-                      value={city}
-                    >
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="filter-label">
-                  Theatre
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.theater}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      theater: e.target.value
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Theatres
-                  </option>
-
-                  {filteredTheaters.map((theater) => (
-                    <option
-                      key={theater}
-                      value={theater}
-                    >
-                      {theater}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="filter-label">
-                  Language
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.language}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      language: e.target.value
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Languages
-                  </option>
-
-                  {uniqueLanguages.map(
-                    (language) => (
-                      <option
-                        key={language}
-                        value={language}
-                      >
-                        {language}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <div className="filter-label">
-                  Format
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.format}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      format: e.target.value
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Formats
-                  </option>
-
-                  {uniqueFormats.map((format) => (
-                    <option
-                      key={format}
-                      value={format}
-                    >
-                      {format}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <MultiSelectFilter
+                label="Format"
+                allLabel="All Formats"
+                options={uniqueFormats.map((format) => ({ value: format, label: format }))}
+                selectedValues={filters.format}
+                onChange={(format) => setFilters((prev) => ({ ...prev, format }))}
+              />
 
               <TimeFilter
                 timeCategories={uniqueTimeCats}
@@ -1130,42 +979,18 @@ export const IndiaMovieDashboard = ({
                 setFilters={setFilters}
               />
 
-              <div>
-                <div className="filter-label">
-                  Occupancy Tier
-                </div>
-
-                <select
-                  className="filter-select"
-                  value={filters.occTier}
-                  onChange={(e) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      occTier: e.target.value
-                    }))
-                  }
-                >
-                  <option value="ALL">
-                    All Tiers
-                  </option>
-
-                  <option value="Sold Out">
-                    Sold Out (100%)
-                  </option>
-
-                  <option value="Almost Full">
-                    Almost Full (80-99%)
-                  </option>
-
-                  <option value="Fast Filling">
-                    Fast Filling (50-79%)
-                  </option>
-
-                  <option value="Available">
-                    Available (0-49%)
-                  </option>
-                </select>
-              </div>
+              <MultiSelectFilter
+                label="Occupancy Tier"
+                allLabel="All Tiers"
+                options={[
+                  { value: 'Sold Out', label: 'Sold Out (100%)' },
+                  { value: 'Almost Full', label: 'Almost Full (80-99%)' },
+                  { value: 'Fast Filling', label: 'Fast Filling (50-79%)' },
+                  { value: 'Available', label: 'Available (0-49%)' }
+                ]}
+                selectedValues={filters.occTier}
+                onChange={(occTier) => setFilters((prev) => ({ ...prev, occTier }))}
+              />
             </div>
           </div>
         )}
