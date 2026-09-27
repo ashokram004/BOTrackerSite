@@ -121,7 +121,7 @@ export const IndiaMovieDashboard = ({
 }) => {
   const [filters, setFilters] = useState({
     platform: 'ALL',
-    mergeCalculation: 'lower',
+    mergeCalculation: 'bms',
     region: 'ALL',
     state: 'ALL',
     city: 'ALL',
@@ -177,8 +177,8 @@ export const IndiaMovieDashboard = ({
 
   const activeMergeCalculation = mergeCalculationOptions.includes(filters.mergeCalculation)
     ? filters.mergeCalculation
-    : mergeCalculationOptions.includes('lower')
-      ? 'lower'
+    : mergeCalculationOptions.includes('bms')
+      ? 'bms'
       : 'existing';
 
   const uniqueRegions = useMemo(
