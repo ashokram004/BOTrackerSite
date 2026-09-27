@@ -121,7 +121,7 @@ export const IndiaMovieDashboard = ({
 }) => {
   const [filters, setFilters] = useState({
     platform: 'ALL',
-    mergeCalculation: 'lower',
+    mergeCalculation: 'existing',
     region: 'ALL',
     state: 'ALL',
     city: 'ALL',
@@ -173,9 +173,7 @@ export const IndiaMovieDashboard = ({
     );
   }, [usableRows]);
 
-  const mergeCalculationOptions = availableMergeCalculations.includes('lower')
-    ? availableMergeCalculations
-    : [];
+  const mergeCalculationOptions = ['existing', ...availableMergeCalculations];
 
   const activeMergeCalculation = mergeCalculationOptions.includes(filters.mergeCalculation)
     ? filters.mergeCalculation
@@ -344,17 +342,20 @@ export const IndiaMovieDashboard = ({
       // Override the old sourceType with our accurate calculated one
       let updatedRow = row.sourceType === sType ? row : { ...row, sourceType: sType };
 
-      if (sType === 'Merged' && activeMergeCalculation !== 'existing') {
+      if (sType === 'Merged') {
         const getSelectedMetric = (metric, fallback) => {
-          const value = rawData[`${activeMergeCalculation}_${metric}`];
+          const valueKey = activeMergeCalculation === 'existing'
+            ? metric
+            : `${activeMergeCalculation}_${metric}`;
+          const value = rawData[valueKey];
           if (value === undefined || value === null || value === '') return fallback;
           const number = Number(value);
           return Number.isFinite(number) ? number : fallback;
         };
 
-        const booked = getSelectedMetric('booked_tickets', updatedRow.booked);
-        const total = getSelectedMetric('total_tickets', updatedRow.total);
-        const gross = getSelectedMetric('booked_gross', updatedRow.gross);
+        const booked = getSelectedMetric('booked_tickets', updatedRow.booked ?? rawData.booked_tickets ?? 0);
+        const total = getSelectedMetric('total_tickets', updatedRow.total ?? rawData.total_tickets ?? 0);
+        const gross = getSelectedMetric('booked_gross', updatedRow.gross ?? rawData.booked_gross ?? 0);
         const occ = getOccupancy(booked, total);
 
         updatedRow = {
@@ -875,7 +876,7 @@ export const IndiaMovieDashboard = ({
         {showFilters && (
           <div className="filter-panel">
             <div className="filter-grid">
-              {mergeCalculationOptions.length > 0 && (
+              {mergeCalculationOptions.length > 1 && (
                 <div>
                   <div className="filter-label">
                     Merge Calculation
@@ -891,10 +892,9 @@ export const IndiaMovieDashboard = ({
                       }))
                     }
                   >
-                    <option value="existing">DEFAULT</option>
                     {mergeCalculationOptions.map((mode) => (
                       <option key={mode} value={mode}>
-                        {MERGE_CALCULATION_LABELS[mode]}
+                        {mode === 'existing' ? 'DEFAULT' : MERGE_CALCULATION_LABELS[mode]}
                       </option>
                     ))}
                   </select>
