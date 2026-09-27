@@ -26,6 +26,13 @@ const formatRupee = (value) => {
 
 const formatNumber = (value) => Number(value || 0).toLocaleString('en-IN');
 
+const getOccupancy = (booked, total) => {
+  const bookedCount = Number(booked);
+  const totalCount = Number(total);
+  if (!Number.isFinite(bookedCount) || !Number.isFinite(totalCount) || totalCount <= 0) return 0;
+  return Math.min(100, Math.max(0, (bookedCount / totalCount) * 100));
+};
+
 const getOccupancyColor = (occ = 0) => {
   if (occ >= 80) return '#4ade80';
   if (occ >= 50) return '#facc15';
@@ -137,6 +144,7 @@ export const IndiaMovieDashboard = ({
   const [showAllDemandTiers, setShowAllDemandTiers] = useState(false);
   const [showAllTheatres, setShowAllTheatres] = useState(false);
   const [showAllLedger, setShowAllLedger] = useState(false);
+  const [ledgerSort, setLedgerSort] = useState({ key: null, direction: 'default' });
 
   const usableRows = useMemo(
     () =>
@@ -347,7 +355,7 @@ export const IndiaMovieDashboard = ({
         const booked = getSelectedMetric('booked_tickets', updatedRow.booked);
         const total = getSelectedMetric('total_tickets', updatedRow.total);
         const gross = getSelectedMetric('booked_gross', updatedRow.gross);
-        const occ = total > 0 ? (booked / total) * 100 : 0;
+        const occ = getOccupancy(booked, total);
 
         updatedRow = {
           ...updatedRow,
@@ -359,6 +367,14 @@ export const IndiaMovieDashboard = ({
           status: getOccTier(occ)
         };
       }
+
+      const occ = getOccupancy(updatedRow.booked, updatedRow.total);
+      updatedRow = {
+        ...updatedRow,
+        occ,
+        occTier: getOccTier(occ),
+        status: getOccTier(occ)
+      };
 
       // --- FILTERING ---
       if (filters.platform !== 'ALL' && updatedRow.sourceType !== filters.platform) continue;
@@ -425,7 +441,7 @@ export const IndiaMovieDashboard = ({
     // 3. Format maps into sorted arrays for the tables
     const formatTable = (mapObj) => Object.values(mapObj).map(item => ({
       ...item,
-      occupancy: item.total > 0 ? (item.booked / item.total) * 100 : 0
+      occupancy: getOccupancy(item.booked, item.total)
     })).sort((a, b) => b.gross - a.gross);
 
     const regionSummary = formatTable(maps.region);
@@ -456,7 +472,7 @@ export const IndiaMovieDashboard = ({
     )
       .map((row) => ({
         ...row,
-        occupancy: row.total > 0 ? (row.booked / row.total) * 100 : 0
+        occupancy: getOccupancy(row.booked, row.total)
       }))
       .sort((a, b) => b.gross - a.gross);
 
@@ -468,7 +484,7 @@ export const IndiaMovieDashboard = ({
       totalVenues: venueSet.size,
       fastFillingShows,
       houseFullShows,
-      occupancy: totalTickets > 0 ? (totalBooked / totalTickets) * 100 : 0,
+      occupancy: getOccupancy(totalBooked, totalTickets),
       sourceBuckets: Object.values(sources),
       regionSummary,
       stateSummary: formatTable(maps.state),
@@ -492,9 +508,50 @@ export const IndiaMovieDashboard = ({
   const [showAllRegionState, setShowAllRegionState] = useState(false);
 
   const sortedLedgerRows = useMemo(
-    () => [...filteredRows].sort((a, b) => Number(b.gross || 0) - Number(a.gross || 0)),
-    [filteredRows]
+    () => {
+      const rows = [...filteredRows];
+      const sortKey = ledgerSort.key || 'gross';
+      const direction = ledgerSort.direction === 'default' ? 'desc' : ledgerSort.direction;
+      const getSortValue = (row) => {
+        switch (sortKey) {
+          case 'platform': return row.sourceType || '';
+          case 'city': return row.city || '';
+          case 'theater': return row.theater || '';
+          case 'languageFormat': return `${row.language || ''} ${row.format || ''}`;
+          case 'time': return row.time || '';
+          case 'tier': return getOccTier(row.occ);
+          case 'booked': return Number(row.booked || 0);
+          case 'gross': return Number(row.gross || 0);
+          case 'occ': return Number(row.occ || 0);
+          default: return '';
+        }
+      };
+
+      return rows.sort((a, b) => {
+        const aValue = getSortValue(a);
+        const bValue = getSortValue(b);
+        const comparison = typeof aValue === 'number' && typeof bValue === 'number'
+          ? aValue - bValue
+          : String(aValue).localeCompare(String(bValue), undefined, { numeric: true, sensitivity: 'base' });
+
+        return direction === 'asc' ? comparison : -comparison;
+      });
+    },
+    [filteredRows, ledgerSort]
   );
+
+  const handleLedgerSort = (key) => {
+    setLedgerSort((current) => {
+      if (current.key !== key) return { key, direction: 'asc' };
+      if (current.direction === 'asc') return { key, direction: 'desc' };
+      return { key: null, direction: 'default' };
+    });
+  };
+
+  const getLedgerSortIndicator = (key) => {
+    if (ledgerSort.key === key) return ledgerSort.direction === 'asc' ? ' ↑' : ' ↓';
+    return ledgerSort.key === null && key === 'gross' ? ' ↓' : '';
+  };
 
   const visibleLedgerRows = showAllLedger
     ? sortedLedgerRows
@@ -578,11 +635,11 @@ export const IndiaMovieDashboard = ({
     return [...groups.values()]
       .map((group) => ({
         ...group,
-        occupancy: group.total > 0 ? (group.booked / group.total) * 100 : 0,
+        occupancy: getOccupancy(group.booked, group.total),
         rows: group.rows
           .map((row) => ({
             ...row,
-            occupancy: row.total > 0 ? (row.booked / row.total) * 100 : 0
+            occupancy: getOccupancy(row.booked, row.total)
           }))
           .sort((a, b) => b.gross - a.gross)
       }))
@@ -1450,15 +1507,38 @@ export const IndiaMovieDashboard = ({
             <table>
               <thead>
                 <tr>
-                  <th>Platform</th>
-                  <th>City</th>
-                  <th>Theatre Name</th>
-                  <th>Lang/Fmt</th>
-                  <th>Time</th>
-                  <th>Tier</th>
-                  <th>Tickets</th>
-                  <th>Gross</th>
-                  <th>Occ %</th>
+                  {[
+                    ['platform', 'Platform'],
+                    ['city', 'City'],
+                    ['theater', 'Theatre Name'],
+                    ['languageFormat', 'Lang/Fmt'],
+                    ['time', 'Time'],
+                    ['tier', 'Tier'],
+                    ['booked', 'Tickets'],
+                    ['gross', 'Gross'],
+                    ['occ', 'Occ %']
+                  ].map(([key, label]) => (
+                    <th key={key}>
+                      <button
+                        type="button"
+                        onClick={() => handleLedgerSort(key)}
+                        aria-label={`Sort by ${label}`}
+                        style={{
+                          width: '100%',
+                          padding: 0,
+                          border: 0,
+                          background: 'none',
+                          color: 'inherit',
+                          font: 'inherit',
+                          textAlign: 'inherit',
+                          whiteSpace: 'nowrap',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {label}{getLedgerSortIndicator(key)}
+                      </button>
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
