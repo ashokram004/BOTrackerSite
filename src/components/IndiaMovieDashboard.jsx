@@ -121,7 +121,7 @@ export const IndiaMovieDashboard = ({
 }) => {
   const [filters, setFilters] = useState({
     platform: 'ALL',
-    mergeCalculation: 'existing',
+    mergeCalculation: 'lower',
     region: 'ALL',
     state: 'ALL',
     city: 'ALL',
@@ -173,11 +173,13 @@ export const IndiaMovieDashboard = ({
     );
   }, [usableRows]);
 
-  const mergeCalculationOptions = ['existing', ...availableMergeCalculations];
+  const mergeCalculationOptions = availableMergeCalculations;
 
   const activeMergeCalculation = mergeCalculationOptions.includes(filters.mergeCalculation)
     ? filters.mergeCalculation
-    : 'existing';
+    : mergeCalculationOptions.includes('lower')
+      ? 'lower'
+      : 'existing';
 
   const uniqueRegions = useMemo(
     () =>
@@ -876,7 +878,7 @@ export const IndiaMovieDashboard = ({
         {showFilters && (
           <div className="filter-panel">
             <div className="filter-grid">
-              {mergeCalculationOptions.length > 1 && (
+              {mergeCalculationOptions.length > 0 && (
                 <div>
                   <div className="filter-label">
                     Merge Calculation
@@ -894,7 +896,7 @@ export const IndiaMovieDashboard = ({
                   >
                     {mergeCalculationOptions.map((mode) => (
                       <option key={mode} value={mode}>
-                        {mode === 'existing' ? 'DEFAULT' : MERGE_CALCULATION_LABELS[mode]}
+                        {MERGE_CALCULATION_LABELS[mode]}
                       </option>
                     ))}
                   </select>
