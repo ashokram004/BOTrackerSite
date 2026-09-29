@@ -226,8 +226,8 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       return undefined;
     }
 
-    const candidates = [`India/movies/${movieSlug}/${showDate}/master_shows_data`];
-    const posterPath = `India/movies/${movieSlug}/${showDate}/posterUrl`;
+    const candidates = [`markets/india/movies/${movieSlug}/${showDate}/master_shows_data`];
+    const posterPath = `markets/india/movies/${movieSlug}/${showDate}/posterUrl`;
     const cacheKey = `${movieSlug}/${showDate}`;
     let active = true;
 

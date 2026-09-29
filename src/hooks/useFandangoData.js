@@ -15,9 +15,9 @@ window.addEventListener('pagehide', () => {
 const getMovieRootCandidates = (region) => {
   const normalized = String(region || '').toLowerCase();
   if (normalized === 'india') {
-    return ['India/movies'];
+    return ['markets/india/movies'];
   }
-  return ['usa/movies'];
+  return ['markets/usa/movies'];
 };
 
 const getMovieDateCandidates = (region, movieSlug) => {
