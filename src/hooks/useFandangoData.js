@@ -17,7 +17,7 @@ const getMovieRootCandidates = (region) => {
   if (normalized === 'india') {
     return ['India/movies'];
   }
-  return ['movies'];
+  return ['usa/movies'];
 };
 
 const getMovieDateCandidates = (region, movieSlug) => {
