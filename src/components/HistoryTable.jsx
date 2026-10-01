@@ -8,10 +8,13 @@ const parseNumber = (val) => {
   return Number.isFinite(num) ? num : 0;
 };
 
-const formatCurrency = (val) => {
+const formatCurrency = (val, currency) => {
   const n = parseNumber(val);
-  if (n === 0) return '$0';
-  return `$${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0
+  }).format(n);
 };
 
 const getOccupancyColor = (occ) => {
@@ -41,7 +44,7 @@ const formatToIst = (timestamp) => {
   }
 };
 
-export const HistoryTable = ({ data }) => {
+export const HistoryTable = ({ data, currency = 'USD', showGrowth = true }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 10;
   const sorted = useMemo(() => {
@@ -68,7 +71,7 @@ export const HistoryTable = ({ data }) => {
               <th>Venues</th>
               <th>Shows</th>
               <th>Occupancy</th>
-              <th>Growth</th>
+              {showGrowth && <th>Growth</th>}
             </tr>
           </thead>
           <tbody>
@@ -77,21 +80,23 @@ export const HistoryTable = ({ data }) => {
                 <td style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
                   {formatToIst(r.timestamp)}
                 </td>
-                <td className="gross-val">{formatCurrency(r.total_gross ?? r.totalGross ?? 0)}</td>
+                <td className="gross-val">{formatCurrency(r.total_gross ?? r.totalGross ?? r.booked_gross ?? r.bookedGross ?? 0, currency)}</td>
                 <td>{parseNumber(r.booked_tickets ?? r.bookedTickets ?? 0).toLocaleString()}</td>
                 <td>{parseNumber(r.venues ?? 0).toLocaleString()}</td>
                 <td>{parseNumber(r.shows ?? 0).toLocaleString()}</td>
                 <td style={{ color: getOccupancyColor(r.occupancy ?? 0) }}>
                   {parseNumber(r.occupancy ?? 0).toFixed(1)}%
                 </td>
-                <td style={{ color: parseNumber(r.growth ?? 0) > 0 ? '#4ade80' : parseNumber(r.growth ?? 0) < 0 ? '#f87171' : 'inherit', fontWeight: 'bold' }}>
-                  {parseNumber(r.growth ?? 0) > 0 ? '+' : ''}{formatCurrency(r.growth ?? 0)}
-                </td>
+                {showGrowth && (
+                  <td style={{ color: parseNumber(r.growth ?? 0) > 0 ? '#4ade80' : parseNumber(r.growth ?? 0) < 0 ? '#f87171' : 'inherit', fontWeight: 'bold' }}>
+                    {parseNumber(r.growth ?? 0) > 0 ? '+' : ''}{formatCurrency(r.growth ?? 0, currency)}
+                  </td>
+                )}
               </tr>
             ))}
             {!sorted.length && (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
+                <td colSpan={showGrowth ? 7 : 6} style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)' }}>
                   No historical data available.
                 </td>
               </tr>

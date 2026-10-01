@@ -219,7 +219,7 @@ const getRowsFromPayload = (value) => {
 };
 
 export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0 }) => {
-  const [data, setData] = useState({ loading: true, rows: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A' });
+  const [data, setData] = useState({ loading: true, rows: [], advanceRows: [], hasAdvanceSnapshot: false, historyData: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A' });
 
   useEffect(() => {
     if (!enabled || !movieSlug || !showDate) {
@@ -227,7 +227,9 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     }
 
     const candidates = [`markets/india/movies/${movieSlug}/${showDate}/master_shows_data`];
+    const advanceSnapshotPath = `markets/india/movies/${movieSlug}/${showDate}/advance_snapshot`;
     const posterPath = `markets/india/movies/${movieSlug}/${showDate}/posterUrl`;
+    const historyPath = `markets/india/movies/${movieSlug}/${showDate}/history`;
     const cacheKey = `${movieSlug}/${showDate}`;
     let active = true;
 
@@ -244,6 +246,9 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     }
 
     let latestRows = [];
+    let latestAdvanceRows = [];
+    let hasAdvanceSnapshot = false;
+    let latestHistory = [];
     let latestLastUpdated = null;
     let latestPosterUrl = '';
 
@@ -252,6 +257,9 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       const nextData = {
         loading: false,
         rows: rows || [],
+        advanceRows: latestAdvanceRows,
+        hasAdvanceSnapshot,
+        historyData: latestHistory,
         error,
         movieName: movieSlug,
         showDate,
@@ -266,6 +274,28 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       if (!active) return;
       latestPosterUrl = snapshot.exists() ? getPosterUrl(snapshot.val()) : '';
       if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
+    });
+
+    const unsubscribeHistory = onValue(ref(database, historyPath), (snapshot) => {
+      if (!active) return;
+      const value = snapshot.exists() ? snapshot.val() : null;
+      latestHistory = value && typeof value === 'object'
+        ? Object.values(value).filter((entry) => entry && typeof entry === 'object')
+        : [];
+      latestHistory.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
+      if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
+    }, (error) => {
+      if (active) console.error('Failed to load India history:', error);
+    });
+
+    const unsubscribeAdvance = onValue(ref(database, advanceSnapshotPath), (snapshot) => {
+      if (!active) return;
+      const flattened = snapshot.exists() ? getRowsFromPayload(snapshot.val()) : { rows: [] };
+      latestAdvanceRows = flattened.rows;
+      hasAdvanceSnapshot = latestAdvanceRows.length > 0;
+      if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
+    }, (error) => {
+      if (active) console.error('Failed to load India advance snapshot:', error);
     });
 
     const unsubscribe = onValue(ref(database, candidates[0]), (snapshot) => {
@@ -294,6 +324,8 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       clearTimeout(timerId);
       unsubscribe();
       unsubscribePoster();
+      unsubscribeHistory();
+      unsubscribeAdvance();
     };
   }, [enabled, movieSlug, showDate, refreshKey]);
 

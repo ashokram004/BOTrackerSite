@@ -141,6 +141,7 @@ function App() {
   const [dateLoading, setDateLoading] = useState(false);
   const [dateError, setDateError] = useState(null);
   const [diffMode, setDiffMode] = useState('hourly');
+  const [salesView, setSalesView] = useState('total');
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -276,8 +277,13 @@ function App() {
   const selectedMovieId = selectedMovie?.id || '';
   const selectedDateValue = selectedDate || '';
 
+  useEffect(() => {
+    setSalesView('total');
+  }, [selectedMovieId, selectedDateValue]);
+
   const dashboardData = useFandangoData({
     diffMode,
+    salesMode: salesView,
     region: selectedRegion || 'usa',
     movieSlug: selectedMovieId,
     showDate: selectedDateValue,
@@ -308,7 +314,7 @@ function App() {
 
   const dashboardIsCurrent = selectedRegion === 'india'
     ? indiaDashboardData.movieName === selectedMovieId && indiaDashboardData.showDate === selectedDateValue
-    : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue;
+    : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue && metadata?.salesMode === salesView;
   const dashboardLoading = loading || !dashboardIsCurrent;
 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
@@ -548,7 +554,13 @@ function App() {
         <>
           <ThemeToggle theme={theme} onToggle={toggleTheme} />
           <IndiaMovieDashboard
-          rows={indiaDashboardData.rows || []}
+          rows={salesView === 'advance' && indiaDashboardData.hasAdvanceSnapshot
+            ? indiaDashboardData.advanceRows || []
+            : indiaDashboardData.rows || []}
+          historyData={indiaDashboardData.historyData || []}
+          hasAdvanceSnapshot={indiaDashboardData.hasAdvanceSnapshot}
+          salesView={salesView}
+          onToggleSalesView={() => setSalesView((value) => value === 'total' ? 'advance' : 'total')}
           movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
           showDate={selectedDateValue}
           lastUpdated={indiaDashboardData.lastUpdated || 'N/A'}
@@ -598,6 +610,7 @@ function App() {
             showDate={metadata?.showDate || selectedDateValue}
             lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
             moviePosterUrl={metadata?.posterUrl || DEFAULT_MOVIE_POSTER_URL}
+            rightActionsClassName="usa-dashboard-right-actions"
             leftActions={[
               { label: 'Home', onClick: () => {
                   setSelectedDate(null);
@@ -617,8 +630,13 @@ function App() {
               { label: 'Reload Data', onClick: () => setReloadKey((value) => value + 1), variant: 'secondary' }
             ]}
             rightActions={[
-              { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'primary' },
-              { label: diffMode === 'daily' ? 'Viewing: Daily Growth' : 'Viewing: Hourly Growth', onClick: () => setDiffMode((m) => (m === 'daily' ? 'hourly' : 'daily')), variant: 'secondary' },
+              { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'secondary' },
+              ...(dashboardData.hasAdvanceSnapshot ? [{
+                label: salesView === 'advance' ? 'Total Sales' : 'Advance Sales',
+                onClick: () => setSalesView((value) => value === 'total' ? 'advance' : 'total'),
+                variant: 'secondary'
+              }] : []),
+              { label: diffMode === 'daily' ? 'Hourly Growth' : 'Daily Growth', onClick: () => setDiffMode((m) => (m === 'daily' ? 'hourly' : 'daily')), variant: 'secondary' },
               { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'primary', disabled: isGeneratingImg }
             ]}
           />

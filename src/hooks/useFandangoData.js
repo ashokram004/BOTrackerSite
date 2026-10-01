@@ -252,6 +252,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
   const region = options.region || DEFAULT_REGION;
   const movieSlug = options.movieSlug || (usesLegacyArguments ? DEFAULT_MOVIE_SLUG : '');
   const showDate = options.showDate || (usesLegacyArguments ? DEFAULT_SHOW_DATE : '');
+  const salesMode = options.salesMode || 'total';
   const enabled = options.enabled !== undefined ? options.enabled : true;
   const includeDifferences = options.includeDifferences !== undefined ? options.includeDifferences : region !== 'india';
   const refreshKey = options.refreshKey || 0;
@@ -262,14 +263,19 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     tables: null,
     rawRows: [],
     historyData: [],
+    hasAdvanceSnapshot: false,
     filteredKpis: null,
     metadata: null,
     error: null,
     differences: null
   });
+  const salesModeRef = useRef(salesMode);
+  salesModeRef.current = salesMode;
 
   const refs = useRef({
     currentData: null,
+    advanceSnapshot: null,
+    hasAdvanceSnapshot: false,
     dailySnapshot: null,
     hourlySnapshot: null,
     historyDataRaw: null,
@@ -287,7 +293,11 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
   const process = useCallback(() => {
     if (!enabled) return;
 
-    const { currentData, dailySnapshot, hourlySnapshot, historyDataRaw, lastUpdated, growthSinceDaily, growthSinceHourly } = refs.current;
+    const activeSalesMode = salesModeRef.current;
+    const { dailySnapshot, hourlySnapshot, historyDataRaw, lastUpdated, growthSinceDaily, growthSinceHourly, advanceSnapshot } = refs.current;
+    const currentData = activeSalesMode === 'advance' && advanceSnapshot
+      ? advanceSnapshot
+      : refs.current.currentData;
 
     const isIndia = String(region).toLowerCase() === 'india';
 
@@ -392,16 +402,20 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     const comparisonReady = diffMode === 'hourly'
       ? refs.current.hourlySnapshotReady
       : refs.current.dailySnapshotReady;
-    if (!comparisonReady) return;
+    if (activeSalesMode !== 'advance' && !comparisonReady) return;
     const safeDailySnapshot = normalizeFirebasePayload(dailySnapshot || safeCurrentData);
     const safeHourlySnapshot = normalizeFirebasePayload(hourlySnapshot || safeCurrentData);
 
     const currentDiffMode = diffMode;
-    const snapshotData = currentDiffMode === 'hourly' ? safeHourlySnapshot : safeDailySnapshot;
+    const snapshotData = activeSalesMode === 'advance'
+      ? safeCurrentData
+      : currentDiffMode === 'hourly' ? safeHourlySnapshot : safeDailySnapshot;
 
     if (!safeCurrentData || !snapshotData) return;
 
-    let growthSince = currentDiffMode === 'hourly' ? growthSinceHourly : growthSinceDaily;
+    let growthSince = activeSalesMode === 'advance'
+      ? 'N/A'
+      : currentDiffMode === 'hourly' ? growthSinceHourly : growthSinceDaily;
 
     const toArray = (value) => {
       if (Array.isArray(value)) return value;
@@ -850,20 +864,24 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       tables,
       rawRows,
       historyData: historyDataRaw || [],
+      hasAdvanceSnapshot: refs.current.hasAdvanceSnapshot,
       filteredKpis: initialFilteredKpis,
       differences,
       metadata: {
-        lastUpdated: formatIstTimestamp(lastUpdated),
+        lastUpdated: formatIstTimestamp(activeSalesMode === 'advance'
+          ? currentData.last_updated || currentData.lastUpdated || lastUpdated
+          : lastUpdated),
         growthSince: growthSince,
         showDate,
         movieSlug,
+        salesMode: activeSalesMode,
         posterUrl: refs.current.posterUrl
       },
       error: null,
       lastLiveUpdate: refs.current.lastLiveUpdate
     };
 
-    sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`, nextData);
+    sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}/${activeSalesMode}/timestamp-v2`, nextData);
     setData(nextData);
 
   }, [diffMode, enabled, movieSlug, region, showDate]);
@@ -875,6 +893,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     if (!enabled) {
       refs.current = {
         currentData: null,
+        advanceSnapshot: null,
+        hasAdvanceSnapshot: false,
         dailySnapshot: null,
         hourlySnapshot: null,
         historyDataRaw: null,
@@ -893,6 +913,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         tables: null,
         rawRows: [],
         historyData: [],
+        hasAdvanceSnapshot: false,
         filteredKpis: null,
         metadata: null,
         error: null,
@@ -904,6 +925,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
     refs.current = {
       currentData: null,
+      advanceSnapshot: null,
+      hasAdvanceSnapshot: false,
       dailySnapshot: null,
       hourlySnapshot: null,
       historyDataRaw: null,
@@ -917,7 +940,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       posterUrl: ''
     };
 
-    const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/timestamp-v2`;
+    const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/${salesModeRef.current}/timestamp-v2`;
     let cachedFrameId;
     let cachedTimerId;
     if (refreshKey > 0) sessionDashboardCache.delete(cacheKey);
@@ -943,6 +966,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       const snapshotRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/last_snapshot`);
       const hourlySnapshotRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/previous_run_snapshot`);
       const historyRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/history`);
+      const advanceSnapshotRef = isIndia ? null : ref(database, `${pathPrefix}/${showDate}/advance_snapshot`);
 
       const unsubCurrent = onValue(currentRef, (snapshot) => {
         if (requestIdRef.current !== requestId) return;
@@ -974,6 +998,19 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       });
 
       unsubscribes.push(unsubPoster);
+
+      const unsubAdvanceSnapshot = onValue(advanceSnapshotRef, (snapshot) => {
+        if (requestIdRef.current !== requestId) return;
+        const payload = snapshot.exists() ? normalizeFirebasePayload(snapshot.val()) : null;
+        const snapshotRows = payload
+          ? (Array.isArray(payload.data) ? payload.data : Object.values(payload.data || payload))
+          : [];
+        refs.current.hasAdvanceSnapshot = snapshotRows.some((row) => row && typeof row === 'object');
+        refs.current.advanceSnapshot = refs.current.hasAdvanceSnapshot ? payload : null;
+        process();
+      });
+
+      unsubscribes.push(unsubAdvanceSnapshot);
 
       if (isIndia) return;
 
@@ -1043,7 +1080,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
   useEffect(() => {
     if (!enabled) return;
     process();
-  }, [diffMode, enabled, process, refreshKey]);
+  }, [diffMode, enabled, process, refreshKey, salesMode]);
 
   return {
     ...data,

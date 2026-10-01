@@ -7,7 +7,8 @@ export const DashboardHeader = ({
   lastUpdated = '',
   moviePosterUrl = DEFAULT_MOVIE_POSTER_URL,
   leftActions = [],
-  rightActions = []
+  rightActions = [],
+  rightActionsClassName = ''
 }) => {
   let [updatedValue, growthValue] = String(lastUpdated || '').split(' • Growth since ');
   updatedValue = updatedValue.toUpperCase();
@@ -73,7 +74,7 @@ export const DashboardHeader = ({
           ))}
         </div>
 
-        <div className="dashboard-header-right-actions">
+        <div className={`dashboard-header-right-actions ${rightActionsClassName}`}>
           {rightActions.map((action, index) => (
             <button
               key={action.key || `${action.label}-${index}`}

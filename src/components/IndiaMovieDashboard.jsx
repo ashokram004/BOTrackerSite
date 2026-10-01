@@ -3,6 +3,7 @@ import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
 import { MultiSelectFilter } from './MultiSelectFilter';
+import { HistoryTable } from './HistoryTable';
 import { CUSTOM_TIME_RANGE, isTimeInRange } from '../utils/timeFilter';
 
 const formatRupee = (value) => {
@@ -114,6 +115,10 @@ const getSourceClass = (source = 'Unknown') => {
 
 export const IndiaMovieDashboard = ({
   rows = [],
+  historyData = [],
+  hasAdvanceSnapshot = false,
+  salesView = 'total',
+  onToggleSalesView,
   movieName = 'Movie',
   showDate = 'N/A',
   moviePosterUrl = '',
@@ -871,8 +876,13 @@ export const IndiaMovieDashboard = ({
                 : 'Show Filters',
               onClick: () =>
                 setShowFilters((v) => !v),
-              variant: 'primary'
+              variant: 'secondary'
             },
+            ...(hasAdvanceSnapshot ? [{
+              label: salesView === 'advance' ? 'Total Sales' : 'Advance Sales',
+              onClick: onToggleSalesView,
+              variant: 'secondary'
+            }] : []),
             {
               label: isGeneratingImage ? 'Generating...' : 'Export Image',
               onClick: handleExportImage,
@@ -1481,6 +1491,8 @@ export const IndiaMovieDashboard = ({
           )}
 
         </div>
+
+        <HistoryTable data={historyData} currency="INR" showGrowth={false} />
 
         <div className="footer">
           @TheWkndCinema • BookMyShow + District Data • Including blocked seats.

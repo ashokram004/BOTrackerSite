@@ -1008,9 +1008,9 @@ select {
 
 .dashboard-action-btn.secondary,
 .toggle-btn {
-  background: rgba(5, 14, 26, 0.82);
-  border-color: rgba(82, 132, 170, 0.34);
-  color: #c2d0dc;
+  background: rgba(37, 54, 70, 0.76);
+  border-color: rgba(157, 180, 199, 0.42);
+  color: #e0e8ef;
 }
 
 .dashboard-action-btn.primary,
@@ -1594,6 +1594,26 @@ tr:hover td {
   .dashboard-header-actions > .dashboard-header-right-actions:has(> :nth-child(2)):not(:has(> :nth-child(3))) .dashboard-action-btn {
     grid-column: span 2;
     width: auto;
+  }
+
+  .dashboard-header-actions > .dashboard-header-right-actions.usa-dashboard-right-actions:has(> :nth-child(4)) {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-column: 1 / -1;
+    width: 100%;
+    gap: 4px;
+  }
+
+  .dashboard-header-actions > .dashboard-header-right-actions.usa-dashboard-right-actions:has(> :nth-child(4)) .dashboard-action-btn,
+  .dashboard-header-actions > .dashboard-header-right-actions.usa-dashboard-right-actions:has(> :nth-child(4)) .dashboard-action-btn:nth-child(2) {
+    grid-column: auto;
+    width: auto;
+    min-width: 0;
+    padding-inline: 2px;
+    font-size: 9px;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .summary-section h2 {
