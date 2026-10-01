@@ -51,25 +51,20 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
 
     if (snapshots.length < 2) return null;
 
-    const baseline = snapshots[0].gross;
     const points = snapshots.map((snapshot, index) => {
       const previousGross = index > 0 ? snapshots[index - 1].gross : null;
       return {
         ...snapshot,
         previousGross,
-        growth: snapshot.gross - baseline,
         changeFromPrevious: previousGross === null ? null : snapshot.gross - previousGross
       };
     });
-    const minimum = Math.min(0, ...points.map((point) => point.growth));
-    const maximum = Math.max(0, ...points.map((point) => point.growth));
-    const range = maximum - minimum || 1;
-    const padding = range * 0.08;
+    const maximumGross = Math.max(0, ...points.map((point) => point.gross));
 
     return {
       points,
-      minimum: minimum - padding,
-      maximum: maximum + padding
+      minimum: 0,
+      maximum: maximumGross > 0 ? maximumGross * 1.08 : 1
     };
   }, [historyData]);
 
@@ -89,7 +84,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
   const getY = (value) => height - paddingBottom
     - ((value - chart.minimum) / (chart.maximum - chart.minimum)) * plotHeight;
   const linePoints = chart.points
-    .map((point, index) => `${getX(index)},${getY(point.growth)}`)
+    .map((point, index) => `${getX(index)},${getY(point.gross)}`)
     .join(' ');
   const labelCount = Math.min(5, chart.points.length);
   const labelIndices = [...new Set(Array.from({ length: labelCount }, (_, index) =>
@@ -115,7 +110,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
   return (
     <div className="summary-section india-gross-growth-chart" style={{ marginTop: '20px', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
-        <h2 style={{ margin: 0 }}>Gross Growth Since First Snapshot</h2>
+        <h2 style={{ margin: 0 }}>Total Gross Over Time</h2>
         <span style={{ color: 'var(--text-muted)', fontSize: '11px', whiteSpace: 'nowrap' }}>
           {chart.points.length.toLocaleString()} runs
         </span>
@@ -126,7 +121,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
           ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
           role="img"
-          aria-label="Gross growth from the first history snapshot to the latest"
+          aria-label="Total gross across all history snapshots"
           style={{ width: '100%', height: 'auto', background: 'transparent' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredIndex(null)}
@@ -141,7 +136,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
                   y1={y}
                   x2={width - paddingRight}
                   y2={y}
-                  stroke={ratio === 0 && chart.minimum < 0 ? '#64748b' : '#334155'}
+                  stroke={ratio === 0 ? '#64748b' : '#334155'}
                   strokeDasharray="5 5"
                   strokeWidth={1}
                 />
@@ -194,13 +189,13 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
             <circle
               key={`${point.time}-${index}`}
               cx={getX(index)}
-              cy={getY(point.growth)}
+              cy={getY(point.gross)}
               r={chart.points.length > 80 ? 2 : 3.5}
               fill="#4ade80"
               stroke={index === hoveredIndex ? '#f8fafc' : 'none'}
               strokeWidth={index === hoveredIndex ? 2 : 0}
             >
-              <title>{`${formatTimestamp(point.timestamp)}: gross growth ${formatRupee(point.growth)}; growth since previous ${point.changeFromPrevious === null ? 'not available' : formatRupee(point.changeFromPrevious)}`}</title>
+              <title>{`${formatTimestamp(point.timestamp)}: total gross ${formatRupee(point.gross)}; growth since previous ${point.changeFromPrevious === null ? 'not available' : formatRupee(point.changeFromPrevious)}`}</title>
             </circle>
           ))}
         </svg>
