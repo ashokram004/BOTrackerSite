@@ -64,7 +64,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
     return {
       points,
       minimum: 0,
-      maximum: maximumGross > 0 ? maximumGross * 1.08 : 1
+      maximum: maximumGross > 0 ? maximumGross : 1
     };
   }, [historyData]);
 
@@ -78,14 +78,13 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
   const paddingBottom = 66;
   const plotWidth = width - paddingLeft - paddingRight;
   const plotHeight = height - paddingTop - paddingBottom;
-  const getX = (index) => chart.points.length === 1
-    ? paddingLeft + plotWidth / 2
-    : paddingLeft + (index / (chart.points.length - 1)) * plotWidth;
+  const getSnapshotX = (index) => paddingLeft + ((index + 1) / chart.points.length) * plotWidth;
   const getY = (value) => height - paddingBottom
     - ((value - chart.minimum) / (chart.maximum - chart.minimum)) * plotHeight;
-  const linePoints = chart.points
-    .map((point, index) => `${getX(index)},${getY(point.gross)}`)
-    .join(' ');
+  const linePoints = [
+    `${paddingLeft},${getY(0)}`,
+    ...chart.points.map((point, index) => `${getSnapshotX(index)},${getY(point.gross)}`)
+  ].join(' ');
   const labelCount = Math.min(5, chart.points.length);
   const labelIndices = [...new Set(Array.from({ length: labelCount }, (_, index) =>
     labelCount === 1
@@ -103,7 +102,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
     const bounds = svgRef.current.getBoundingClientRect();
     if (!bounds.width) return;
     const chartX = ((event.clientX - bounds.left) / bounds.width) * width;
-    const pointIndex = Math.round(((chartX - paddingLeft) / plotWidth) * (chart.points.length - 1));
+    const pointIndex = Math.round(((chartX - paddingLeft) / plotWidth) * chart.points.length) - 1;
     setHoveredIndex(Math.max(0, Math.min(chart.points.length - 1, pointIndex)));
   };
 
@@ -152,7 +151,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
             return (
               <text
                 key={index}
-                x={getX(index)}
+                x={getSnapshotX(index)}
                 y={height - paddingBottom + 28}
                 fill="#A0A0B4"
                 fontSize={12}
@@ -163,7 +162,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
             );
           })}
 
-          {chart.points.length > 1 && (
+          {chart.points.length > 0 && (
             <polyline
               points={linePoints}
               fill="none"
@@ -174,11 +173,19 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
             />
           )}
 
+          <circle
+            cx={paddingLeft}
+            cy={getY(0)}
+            r={chart.points.length > 80 ? 2 : 3.5}
+            fill="#4ade80"
+            aria-hidden="true"
+          />
+
           {hoveredPoint && (
             <line
-              x1={getX(hoveredIndex)}
+              x1={getSnapshotX(hoveredIndex)}
               y1={paddingTop}
-              x2={getX(hoveredIndex)}
+              x2={getSnapshotX(hoveredIndex)}
               y2={height - paddingBottom}
               stroke="#94a3b8"
               strokeWidth={1.5}
@@ -188,14 +195,14 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
           {chart.points.map((point, index) => (
             <circle
               key={`${point.time}-${index}`}
-              cx={getX(index)}
+              cx={getSnapshotX(index)}
               cy={getY(point.gross)}
               r={chart.points.length > 80 ? 2 : 3.5}
               fill="#4ade80"
               stroke={index === hoveredIndex ? '#f8fafc' : 'none'}
               strokeWidth={index === hoveredIndex ? 2 : 0}
             >
-              <title>{`${formatTimestamp(point.timestamp)}: total gross ${formatRupee(point.gross)}; growth since previous ${point.changeFromPrevious === null ? 'not available' : formatRupee(point.changeFromPrevious)}`}</title>
+              <title>{`${formatTimestamp(point.timestamp)}: total gross ${formatRupee(point.gross)}; growth ${point.changeFromPrevious === null ? 'not available' : formatRupee(point.changeFromPrevious)}`}</title>
             </circle>
           ))}
         </svg>
@@ -225,7 +232,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', margin: '4px 0' }}>
               <span style={{ color: hoveredPoint.changeFromPrevious === null || hoveredPoint.changeFromPrevious >= 0 ? '#4ade80' : '#f87171' }}>
-                Growth Since Previous:
+                Growth:
               </span>
               <strong>
                 {hoveredPoint.changeFromPrevious === null ? 'No previous run' : formatRupee(hoveredPoint.changeFromPrevious)}
