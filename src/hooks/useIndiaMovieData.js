@@ -219,7 +219,7 @@ const getRowsFromPayload = (value) => {
 };
 
 export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0 }) => {
-  const [data, setData] = useState({ loading: true, rows: [], advanceRows: [], hasAdvanceSnapshot: false, historyData: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A' });
+  const [data, setData] = useState({ loading: true, rows: [], advanceRows: [], hasAdvanceSnapshot: false, historyData: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A', growthSince: 'N/A' });
 
   useEffect(() => {
     if (!enabled || !movieSlug || !showDate) {
@@ -264,6 +264,9 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
         movieName: movieSlug,
         showDate,
         lastUpdated: formatIstDate(lastUpdatedValue || 'N/A'),
+        growthSince: latestHistory.length >= 2
+          ? formatIstDate(latestHistory[latestHistory.length - 2].timestamp || 'N/A')
+          : 'N/A',
         posterUrl
       };
       sessionIndiaDashboardCache.set(cacheKey, nextData);

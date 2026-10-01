@@ -564,6 +564,7 @@ function App() {
           movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
           showDate={selectedDateValue}
           lastUpdated={indiaDashboardData.lastUpdated || 'N/A'}
+          growthSince={indiaDashboardData.growthSince || 'N/A'}
           moviePosterUrl={indiaDashboardData.posterUrl}
           onBack={() => {
             setSelectedDate(null);

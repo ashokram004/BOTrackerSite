@@ -3,6 +3,7 @@ import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
 import { MultiSelectFilter } from './MultiSelectFilter';
+import { IndiaGrossGrowthChart } from './IndiaGrossGrowthChart';
 import { HistoryTable } from './HistoryTable';
 import { CUSTOM_TIME_RANGE, isTimeInRange } from '../utils/timeFilter';
 
@@ -81,6 +82,44 @@ const getBadgeClass = (tier = 'Available') => {
   return 'b-avail';
 };
 
+const getLatestHistoryDeltas = (historyData) => {
+  const snapshots = [...(historyData || [])]
+    .filter((snapshot) => snapshot && typeof snapshot === 'object')
+    .sort((a, b) => {
+      const aTime = new Date(a.timestamp || 0).getTime();
+      const bTime = new Date(b.timestamp || 0).getTime();
+      return (Number.isFinite(aTime) ? aTime : 0) - (Number.isFinite(bTime) ? bTime : 0);
+    })
+    .slice(-2);
+
+  if (snapshots.length < 2) return {};
+
+  const getMetric = (snapshot, keys) => {
+    for (const key of keys) {
+      const value = snapshot[key];
+      if (value === undefined || value === null || value === '') continue;
+      const number = Number(value);
+      if (Number.isFinite(number)) return number;
+    }
+    return null;
+  };
+
+  const [previous, latest] = snapshots;
+  const getDelta = (keys) => {
+    const previousValue = getMetric(previous, keys);
+    const latestValue = getMetric(latest, keys);
+    return previousValue === null || latestValue === null ? null : latestValue - previousValue;
+  };
+
+  return {
+    gross: getDelta(['total_gross', 'totalGross', 'booked_gross', 'bookedGross']),
+    tickets: getDelta(['booked_tickets', 'bookedTickets']),
+    venues: getDelta(['venues']),
+    shows: getDelta(['shows']),
+    occupancy: getDelta(['occupancy'])
+  };
+};
+
 const SOURCE_META = {
   BookMyShow: {
     tone: 'platform-bms',
@@ -126,7 +165,8 @@ export const IndiaMovieDashboard = ({
   onChangeMovie,
   onHome,
   onReload,
-  lastUpdated = 'N/A'
+  lastUpdated = 'N/A',
+  growthSince = 'N/A'
 }) => {
   const [filters, setFilters] = useState({
     platform: [],
@@ -572,26 +612,34 @@ export const IndiaMovieDashboard = ({
     ? sortedLedgerRows
     : sortedLedgerRows.slice(0, 20);
 
+  const historyDeltas = getLatestHistoryDeltas(historyData);
   const summaryCards = [
     {
       label: 'Total Gross',
-      value: formatRupee(totalGross)
+      value: formatRupee(totalGross),
+      growth: historyDeltas.gross,
+      growthFormat: 'currency'
     },
     {
       label: 'Tickets Sold',
-      value: formatNumber(totalBooked)
+      value: formatNumber(totalBooked),
+      growth: historyDeltas.tickets
     },
     {
       label: 'Total Shows',
-      value: formatNumber(filteredRows.length)
+      value: formatNumber(filteredRows.length),
+      growth: historyDeltas.shows
     },
     {
       label: 'Total Venues',
-      value: formatNumber(totalVenues)
+      value: formatNumber(totalVenues),
+      growth: historyDeltas.venues
     },
     {
       label: 'Overall Occupancy',
-      value: `${Number(occupancy).toFixed(1)}%`
+      value: `${Number(occupancy).toFixed(1)}%`,
+      growth: historyDeltas.occupancy,
+      growthFormat: 'percentage-points'
     },
     {
       label: 'Fast Filling / House Full',
@@ -698,13 +746,28 @@ export const IndiaMovieDashboard = ({
     }
   };
 
-  const renderSummaryCard = (title, value) => (
-    <div key={title} className="kpi-card">
-      <div className="kpi-title">{title}</div>
+  const renderSummaryCard = (card) => (
+    <div key={card.label} className="kpi-card">
+      <div className="kpi-head">
+        <div className="kpi-title">{card.label}</div>
+        {card.growth !== null && card.growth !== undefined && card.growth !== 0 && (
+          <div
+            className={`kpi-sub ${card.growth > 0 ? 'delta-positive' : 'delta-negative'}`}
+            style={{ color: card.growth > 0 ? '#4ade80' : '#f87171' }}
+          >
+            {card.growth > 0 ? '+' : '-'}
+            {card.growthFormat === 'currency'
+              ? formatRupee(Math.abs(card.growth))
+              : card.growthFormat === 'percentage-points'
+                ? `${Math.abs(card.growth).toFixed(1)} pp`
+                : formatNumber(Math.abs(card.growth))}
+          </div>
+        )}
+      </div>
       <div
         className="kpi-value"
       >
-        {value}
+        {card.value}
       </div>
     </div>
   );
@@ -845,7 +908,9 @@ export const IndiaMovieDashboard = ({
           marketLabel={<><span className="dashboard-brand">TheWkndCinema</span> India Box Office Tracking</>}
           movieName={movieName}
           showDate={showDate}
-          lastUpdated={lastUpdated}
+          lastUpdated={growthSince !== 'N/A'
+            ? `${lastUpdated} • Growth since ${growthSince} IST`
+            : lastUpdated}
           moviePosterUrl={moviePosterUrl || DEFAULT_MOVIE_POSTER_URL}
           leftActions={[
             {
@@ -1006,12 +1071,7 @@ export const IndiaMovieDashboard = ({
         )}
 
         <div className="kpi-grid india-kpi-grid">
-          {summaryCards.map((card) =>
-            renderSummaryCard(
-              card.label,
-              card.value
-            )
-          )}
+          {summaryCards.map(renderSummaryCard)}
         </div>
 
         <div className="platform-grid">
@@ -1493,6 +1553,7 @@ export const IndiaMovieDashboard = ({
         </div>
 
         <HistoryTable data={historyData} currency="INR" showGrowth={false} />
+        <IndiaGrossGrowthChart historyData={historyData} />
 
         <div className="footer">
           @TheWkndCinema • BookMyShow + District Data • Including blocked seats.
