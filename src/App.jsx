@@ -17,6 +17,7 @@ import { get, ref } from 'firebase/database';
 import './App.css';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { INDIA_OLD, US_OLD } from './movieGroups';
 
 const REGION_META = {
   usa: {
@@ -133,6 +134,7 @@ function App() {
   const routeMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
   const [selectedRegion, setSelectedRegion] = useState(normalizedRegion);
   const [movies, setMovies] = useState([]);
+  const [showOldMovies, setShowOldMovies] = useState(false);
   const [selectedMovie, setSelectedMovie] = useState(routeMovie);
   const [dates, setDates] = useState([]);
   const [selectedDate, setSelectedDate] = useState(routeDate || null);
@@ -149,6 +151,10 @@ function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('bo-tracker-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    setShowOldMovies(false);
+  }, [selectedRegion]);
 
   const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
@@ -276,6 +282,11 @@ function App() {
   const shouldFetchDashboard = Boolean(selectedRegion && selectedMovie && selectedDate);
   const selectedMovieId = selectedMovie?.id || '';
   const selectedDateValue = selectedDate || '';
+  const oldMovieIds = selectedRegion === 'india' ? INDIA_OLD : US_OLD;
+  const oldMovieIdSet = new Set(oldMovieIds.map((id) => String(id).trim().toLowerCase()));
+  const oldMovies = movies.filter((movie) => oldMovieIdSet.has(movie.id.toLowerCase()));
+  const currentMovies = movies.filter((movie) => !oldMovieIdSet.has(movie.id.toLowerCase()));
+  const displayedMovies = showOldMovies ? oldMovies : currentMovies;
 
   useEffect(() => {
     setSalesView('total');
@@ -779,25 +790,55 @@ function App() {
         ) : movies.length === 0 ? (
           <div style={{ color: '#f8fafc', padding: '20px' }}>No movies found for {REGION_META[selectedRegion].label}.</div>
         ) : (
-          <div className="selection-grid selection-grid-movies">
-            {movies.map((movie) => (
-              <button
-                key={movie.id}
-                type="button"
-                onClick={() => {
-                  setDateLoading(true);
-                  setDateError(null);
-                  setSelectedMovie(movie);
-                  navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
-                }}
-                className="selection-card"
-                
-              >
-                <div className="selection-card-kicker">Movie</div>
-                <div className="selection-card-title">{movie.name}</div>
-              </button>
-            ))}
-          </div>
+          <>
+            {oldMovieIds.length > 0 && (
+              <div className="movie-list-tabs" role="group" aria-label="Movie list">
+                <button
+                  type="button"
+                  className={`movie-list-tab ${!showOldMovies ? 'active' : ''}`}
+                  aria-pressed={!showOldMovies}
+                  onClick={() => setShowOldMovies(false)}
+                >
+                  Current Movies
+                </button>
+                <button
+                  type="button"
+                  className={`movie-list-tab ${showOldMovies ? 'active' : ''}`}
+                  aria-pressed={showOldMovies}
+                  onClick={() => setShowOldMovies(true)}
+                >
+                  Old Movies
+                </button>
+              </div>
+            )}
+
+            {displayedMovies.length > 0 ? (
+              <div className="selection-grid selection-grid-movies">
+                {displayedMovies.map((movie) => (
+                  <button
+                    key={movie.id}
+                    type="button"
+                    onClick={() => {
+                      setDateLoading(true);
+                      setDateError(null);
+                      setSelectedMovie(movie);
+                      navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
+                    }}
+                    className="selection-card"
+                  >
+                    <div className="selection-card-kicker">Movie</div>
+                    <div className="selection-card-title">{movie.name}</div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="movie-list-empty">
+                {showOldMovies
+                  ? 'No configured old movies were found for this market.'
+                  : 'No current movies found for this market.'}
+              </div>
+            )}
+          </>
         )}
         </div>
       </>

@@ -1,0 +1,2 @@
+export const US_OLD = ["peddi-2026", "toxic-a-fairytale-for-grownups-2026", "vishwanath-and-sons-2026", "avengers-endgame-encore-2026"];
+export const INDIA_OLD = ["vishwanath-and-sons", "toxic-a-fairy-tale-for-grown-ups", "panjaa-2011", "irumudi", "avengers-endgame-encore"];
