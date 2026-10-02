@@ -155,15 +155,15 @@ const getSourceClass = (source = 'Unknown') => {
 export const IndiaMovieDashboard = ({
   rows = [],
   historyData = [],
-  hasAdvanceSnapshot = false,
   salesView = 'total',
-  onToggleSalesView,
+  salesModeOptions = [],
+  onSalesViewChange,
   movieName = 'Movie',
   showDate = 'N/A',
+  dates = [],
+  onDateChange,
   moviePosterUrl = '',
-  onBack,
   onChangeMovie,
-  onHome,
   onReload,
   lastUpdated = 'N/A',
   growthSince = 'N/A'
@@ -902,30 +902,25 @@ export const IndiaMovieDashboard = ({
   );
 
   return (
-    <div id="app">
+    <main className="site-main dashboard-page">
       <div className="container">
         <DashboardHeader
-          marketLabel={<><span className="dashboard-brand">TheWkndCinema</span> India Box Office Tracking</>}
+          marketLabel="INDIA BOX OFFICE"
           movieName={movieName}
           showDate={showDate}
+          dateOptions={dates}
+          onDateChange={onDateChange}
+          salesMode={salesView}
+          salesModeOptions={salesModeOptions}
+          onSalesModeChange={onSalesViewChange}
           lastUpdated={growthSince !== 'N/A'
             ? `${lastUpdated} • Growth since ${growthSince} IST`
             : lastUpdated}
           moviePosterUrl={moviePosterUrl || DEFAULT_MOVIE_POSTER_URL}
           leftActions={[
             {
-              label: 'Home',
-              onClick: onHome,
-              variant: 'secondary'
-            },
-            {
               label: 'Change Movie',
               onClick: onChangeMovie,
-              variant: 'secondary'
-            },
-            {
-              label: 'Change Date',
-              onClick: onBack,
               variant: 'secondary'
             },
             {
@@ -943,11 +938,6 @@ export const IndiaMovieDashboard = ({
                 setShowFilters((v) => !v),
               variant: 'secondary'
             },
-            ...(hasAdvanceSnapshot ? [{
-              label: salesView === 'advance' ? 'Total Sales' : 'Advance Sales',
-              onClick: onToggleSalesView,
-              variant: 'secondary'
-            }] : []),
             {
               label: isGeneratingImage ? 'Generating...' : 'Export Image',
               onClick: handleExportImage,
@@ -1559,6 +1549,6 @@ export const IndiaMovieDashboard = ({
           @TheWkndCinema • BookMyShow + District Data • Including blocked seats.
         </div>
       </div>
-    </div>
+    </main>
   );
 };

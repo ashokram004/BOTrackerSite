@@ -20,27 +20,60 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { INDIA_OLD, US_OLD } from './movieGroups';
 
 const REGION_META = {
-  usa: {
-    label: 'USA',
-    description: 'US box office dashboard'
-  },
   india: {
     label: 'India',
     description: 'Indian box office dashboard'
+  },
+  usa: {
+    label: 'USA',
+    description: 'US box office dashboard'
   }
 };
 
-const ThemeToggle = ({ theme, onToggle }) => (
-  <button
-    type="button"
-    className="theme-toggle"
-    onClick={onToggle}
-    aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-    title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-  >
-    <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
-    {theme === 'dark' ? 'Light' : 'Dark'}
-  </button>
+const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegion }) => (
+  <header className="site-header">
+    <div className="site-header-inner">
+      <button className="site-brand" type="button" onClick={onHome} aria-label="The Wknd Cinema home">
+        <span className="site-brand-mark" aria-hidden="true">W</span>
+        <span className="site-brand-copy">
+          <strong>THE WKND CINEMA</strong>
+          <small>BOX OFFICE INTELLIGENCE</small>
+        </span>
+      </button>
+
+      <nav className="site-nav" aria-label="Main navigation">
+        <button type="button" className={!selectedRegion ? 'active' : ''} onClick={onHome}>
+          Overview
+        </button>
+        <span className="site-nav-divider" aria-hidden="true" />
+        {Object.entries(REGION_META).map(([key, meta]) => (
+          <button
+            key={key}
+            type="button"
+            className={selectedRegion === key ? 'active' : ''}
+            aria-current={selectedRegion === key ? 'page' : undefined}
+            onClick={() => onSelectRegion(key)}
+          >
+            {meta.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="site-header-tools">
+        <span className="site-live-indicator"><span aria-hidden="true" /> LIVE TRACKING</span>
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={onToggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+          {theme === 'dark' ? 'Light' : 'Dark'}
+        </button>
+      </div>
+    </div>
+  </header>
 );
 
 const getMovieRootCandidates = (region) => {
@@ -103,6 +136,48 @@ const getLatestDateKey = (value) => {
   return dateKeys.sort().at(-1) || null;
 };
 
+const hasReportData = (value) => {
+  if (!value || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.length > 0;
+  return Object.keys(value).length > 0;
+};
+
+const hasAdvanceReportData = (value) => {
+  if (!value || typeof value !== 'object') return false;
+  const rows = value.data ?? value;
+  if (Array.isArray(rows)) return rows.length > 0;
+  if (typeof rows !== 'object') return false;
+  return Object.values(rows).some((row) => row && typeof row === 'object');
+};
+
+const getDatesBySalesMode = (raw, dateKeys) => {
+  const total = [];
+  const advance = [];
+
+  dateKeys.forEach((date) => {
+    const report = raw?.[date];
+    if (!report || typeof report !== 'object') return;
+
+    if (
+      hasReportData(report.master_shows_data) ||
+      hasReportData(report.last_snapshot) ||
+      hasReportData(report.previous_run_snapshot) ||
+      hasReportData(report.data)
+    ) {
+      total.push(date);
+    }
+
+    if (hasAdvanceReportData(report.advance_snapshot)) {
+      advance.push(date);
+    }
+  });
+
+  return {
+    total: total.length || advance.length ? total : dateKeys,
+    advance
+  };
+};
+
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const loadNodeWithRetry = async (roots, attempts = 4) => {
@@ -134,16 +209,24 @@ function App() {
   const routeMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
   const [selectedRegion, setSelectedRegion] = useState(normalizedRegion);
   const [movies, setMovies] = useState([]);
-  const [showOldMovies, setShowOldMovies] = useState(false);
+  const [movieSearch, setMovieSearch] = useState('');
+  const [movieShelf, setMovieShelf] = useState('now_playing');
   const [selectedMovie, setSelectedMovie] = useState(routeMovie);
   const [dates, setDates] = useState([]);
+  const [datesBySalesMode, setDatesBySalesMode] = useState({ total: [], advance: [] });
   const [selectedDate, setSelectedDate] = useState(routeDate || null);
   const [movieLoading, setMovieLoading] = useState(Boolean(normalizedRegion && !routeMovieSlug));
   const [movieError, setMovieError] = useState(null);
-  const [dateLoading, setDateLoading] = useState(false);
+  const [dateLoading, setDateLoading] = useState(Boolean(routeMovie && !routeDate));
   const [dateError, setDateError] = useState(null);
   const [diffMode, setDiffMode] = useState('hourly');
-  const [salesView, setSalesView] = useState('total');
+  const [salesModeState, setSalesModeState] = useState({
+    movieId: routeMovie?.id || '',
+    mode: 'total'
+  });
+  const selectedMovieId = selectedMovie?.id || '';
+  const selectedDateValue = selectedDate || '';
+  const salesView = salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'total';
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -151,10 +234,6 @@ function App() {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('bo-tracker-theme', theme);
   }, [theme]);
-
-  useEffect(() => {
-    setShowOldMovies(false);
-  }, [selectedRegion]);
 
   const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
 
@@ -190,11 +269,19 @@ function App() {
         }
         if (!active) return;
 
+        const oldMovieIds = new Set(
+          (selectedRegion === 'india' ? INDIA_OLD : US_OLD)
+            .map((id) => String(id).trim().toLowerCase())
+        );
         const movieList = Object.entries(raw)
           .filter(([, value]) => value !== null && value !== undefined)
           .map(([id, value]) => ({
             id,
             name: value && typeof value === 'object' && value.name ? value.name : prettifySlug(id),
+            lifecycleStatus: ['coming_soon', 'now_playing', 'ended'].includes(value?.lifecycleStatus)
+              ? value.lifecycleStatus
+              : oldMovieIds.has(id.toLowerCase()) ? 'ended' : 'now_playing',
+            releaseDate: /^\d{4}-\d{2}-\d{2}$/.test(value?.releaseDate || '') ? value.releaseDate : null,
             raw: value
           }));
 
@@ -213,11 +300,17 @@ function App() {
           return latestDateComparison || a.name.localeCompare(b.name);
         });
 
+        const comingSoonMovies = moviesWithLatestDates.filter((movie) => movie.lifecycleStatus === 'coming_soon');
+        const nowPlayingMovies = moviesWithLatestDates.filter((movie) => movie.lifecycleStatus === 'now_playing');
         setMovies(moviesWithLatestDates);
+        if (!nowPlayingMovies.length) {
+          setMovieShelf(comingSoonMovies.length ? 'coming_soon' : 'ended');
+        }
         setMovieError(null);
         setSelectedMovie((prev) => (prev && movieList.some((movie) => movie.id === prev.id) ? prev : null));
         if (!movieList.length) {
           setDates([]);
+          setDatesBySalesMode({ total: [], advance: [] });
           setSelectedDate(null);
         }
       } catch (error) {
@@ -257,12 +350,30 @@ function App() {
         if (!active) return;
 
         const dateKeys = Object.keys(raw)
-          .filter((key) => key && raw[key] !== null && raw[key] !== undefined)
-          .sort();
+          .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key) && raw[key] !== null && raw[key] !== undefined)
+          .sort((a, b) => b.localeCompare(a));
 
+        const modeDates = getDatesBySalesMode(raw, dateKeys);
+        setDatesBySalesMode(modeDates);
         setDates(dateKeys);
         setDateError(null);
-        setSelectedDate((prev) => (prev && dateKeys.includes(prev) ? prev : null));
+        const isCurrentMovieRoute = routeMovieSlug === selectedMovie.id;
+        const requestedMode = salesView;
+        const routeDateMode = Object.keys(modeDates).find((mode) => modeDates[mode].includes(routeDate));
+        const nextMode = isCurrentMovieRoute && modeDates[requestedMode].includes(routeDate)
+          ? requestedMode
+          : isCurrentMovieRoute && routeDateMode
+            ? routeDateMode
+            : requestedMode;
+        const modeDateKeys = modeDates[nextMode];
+        const nextDate = isCurrentMovieRoute && modeDateKeys.includes(routeDate)
+          ? routeDate
+          : modeDateKeys[0] || null;
+        setSalesModeState({ movieId: selectedMovie.id, mode: nextMode });
+        setSelectedDate(nextDate);
+        if (nextDate && routeDate !== nextDate) {
+          navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovie.id)}/${encodeURIComponent(nextDate)}`);
+        }
       } catch (error) {
         if (!active) return;
         console.error('Error loading dates:', error);
@@ -277,20 +388,34 @@ function App() {
     return () => {
       active = false;
     };
-  }, [selectedMovie, selectedRegion]);
+  }, [navigate, routeDate, routeMovieSlug, salesView, selectedMovie, selectedRegion]);
 
   const shouldFetchDashboard = Boolean(selectedRegion && selectedMovie && selectedDate);
-  const selectedMovieId = selectedMovie?.id || '';
-  const selectedDateValue = selectedDate || '';
-  const oldMovieIds = selectedRegion === 'india' ? INDIA_OLD : US_OLD;
-  const oldMovieIdSet = new Set(oldMovieIds.map((id) => String(id).trim().toLowerCase()));
-  const oldMovies = movies.filter((movie) => oldMovieIdSet.has(movie.id.toLowerCase()));
-  const currentMovies = movies.filter((movie) => !oldMovieIdSet.has(movie.id.toLowerCase()));
-  const displayedMovies = showOldMovies ? oldMovies : currentMovies;
-
-  useEffect(() => {
-    setSalesView('total');
-  }, [selectedMovieId, selectedDateValue]);
+  const selectedModeDates = datesBySalesMode[salesView] || [];
+  const salesModeOptions = [
+    { value: 'total', label: 'Current sales', disabled: datesBySalesMode.total.length === 0 },
+    { value: 'advance', label: 'Advance sales', disabled: datesBySalesMode.advance.length === 0 }
+  ];
+  const comingSoonMovies = movies.filter((movie) => movie.lifecycleStatus === 'coming_soon');
+  const currentMovies = movies.filter((movie) => movie.lifecycleStatus === 'now_playing');
+  const oldMovies = movies.filter((movie) => movie.lifecycleStatus === 'ended');
+  const activeMovieShelf = movieShelf;
+  const displayedMovies = {
+    coming_soon: comingSoonMovies,
+    now_playing: currentMovies,
+    ended: oldMovies
+  }[activeMovieShelf];
+  const orderedDisplayedMovies = [...displayedMovies].sort((a, b) => {
+    if (activeMovieShelf === 'coming_soon') {
+      return String(a.releaseDate || '9999-12-31').localeCompare(String(b.releaseDate || '9999-12-31'))
+        || a.name.localeCompare(b.name);
+    }
+    return String(b.latestDate || '').localeCompare(String(a.latestDate || ''))
+      || a.name.localeCompare(b.name);
+  });
+  const searchedMovies = orderedDisplayedMovies.filter((movie) =>
+    movie.name.toLowerCase().includes(movieSearch.trim().toLowerCase())
+  );
 
   const dashboardData = useFandangoData({
     diffMode,
@@ -545,9 +670,12 @@ function App() {
   const handleSelectRegion = (key) => {
     setSelectedRegion(key);
     setMovies([]);
+    setMovieShelf('now_playing');
+    setMovieSearch('');
     setMovieError(null);
     setSelectedMovie(null);
     setDates([]);
+    setDatesBySalesMode({ total: [], advance: [] });
     setDateError(null);
     setSelectedDate(null);
     setMovieLoading(true);
@@ -555,42 +683,73 @@ function App() {
     navigate(`/${key}`);
   };
 
+  const handleHome = () => {
+    setSelectedDate(null);
+    setSelectedMovie(null);
+    setSelectedRegion(null);
+    setMovieSearch('');
+    navigate('/');
+  };
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}/${encodeURIComponent(date)}`);
+  };
+
+  const handleSalesViewChange = (nextSalesView) => {
+    const nextDates = datesBySalesMode[nextSalesView] || [];
+    if (!nextDates.length) return;
+
+    setSalesModeState({ movieId: selectedMovieId, mode: nextSalesView });
+    const nextDate = nextDates.includes(selectedDateValue) ? selectedDateValue : nextDates[0];
+    if (nextDate !== selectedDateValue) handleDateChange(nextDate);
+  };
+
+  const siteHeader = (
+    <SiteHeader
+      theme={theme}
+      onToggleTheme={toggleTheme}
+      onHome={handleHome}
+      onSelectRegion={handleSelectRegion}
+      selectedRegion={selectedRegion}
+    />
+  );
+
   const renderDashboard = () => {
     if (dashboardLoading) {
-      return <LoadingState label={`Loading ${regionTitle} data`} />;
+      return (
+        <>
+          {siteHeader}
+          <main className="site-main dashboard-loading">
+            <LoadingState label={`Loading ${regionTitle} data`} />
+          </main>
+        </>
+      );
     }
 
     if (selectedRegion === 'india') {
       return (
         <>
-          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+          {siteHeader}
           <IndiaMovieDashboard
           rows={salesView === 'advance' && indiaDashboardData.hasAdvanceSnapshot
             ? indiaDashboardData.advanceRows || []
             : indiaDashboardData.rows || []}
           historyData={indiaDashboardData.historyData || []}
-          hasAdvanceSnapshot={indiaDashboardData.hasAdvanceSnapshot}
           salesView={salesView}
-          onToggleSalesView={() => setSalesView((value) => value === 'total' ? 'advance' : 'total')}
           movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
           showDate={selectedDateValue}
+          dates={selectedModeDates}
+          salesModeOptions={salesModeOptions}
+          onSalesViewChange={handleSalesViewChange}
+          onDateChange={handleDateChange}
           lastUpdated={indiaDashboardData.lastUpdated || 'N/A'}
           growthSince={indiaDashboardData.growthSince || 'N/A'}
           moviePosterUrl={indiaDashboardData.posterUrl}
-          onBack={() => {
-            setSelectedDate(null);
-            navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}`);
-          }}
           onChangeMovie={() => {
             setSelectedDate(null);
             setSelectedMovie(null);
             navigate(`/${selectedRegion}`);
-          }}
-          onHome={() => {
-            setSelectedDate(null);
-            setSelectedMovie(null);
-            setSelectedRegion(null);
-            navigate('/');
           }}
           onReload={() => setIndiaRefreshKey((value) => value + 1)}
           />
@@ -599,12 +758,19 @@ function App() {
     }
 
     if (error) {
-      return <div style={{ color: '#f87171', padding: '20px' }}>Error: {error}</div>;
+      return (
+        <>
+          {siteHeader}
+          <main className="site-main">
+            <div className="dashboard-error" role="alert">Unable to load the dashboard: {error}</div>
+          </main>
+        </>
+      );
     }
 
     return (
       <>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        {siteHeader}
         {showLiveUpdate && (
           <div className="live-update-demo-banner" role="status" aria-live="polite">
             <span className="live-update-demo-icon" aria-hidden="true">&#10003;</span>
@@ -614,40 +780,30 @@ function App() {
             </span>
           </div>
         )}
-        <div id="app">
+        <main key={`report-${selectedRegion}-${selectedMovieId}`} className="site-main dashboard-page">
         <div className="container">
           <DashboardHeader
-            marketLabel={selectedRegion ? <><span className="dashboard-brand">TheWkndCinema</span> {REGION_META[selectedRegion]?.label} Box Office Tracking</> : 'Box Office Tracking'}
+            marketLabel={`${REGION_META[selectedRegion]?.label} BOX OFFICE`}
             movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
             showDate={metadata?.showDate || selectedDateValue}
+            dateOptions={selectedModeDates}
+            onDateChange={handleDateChange}
+            salesMode={salesView}
+            salesModeOptions={salesModeOptions}
+            onSalesModeChange={handleSalesViewChange}
             lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
             moviePosterUrl={metadata?.posterUrl || DEFAULT_MOVIE_POSTER_URL}
             rightActionsClassName="usa-dashboard-right-actions"
             leftActions={[
-              { label: 'Home', onClick: () => {
-                  setSelectedDate(null);
-                  setSelectedMovie(null);
-                  setSelectedRegion(null);
-                  navigate('/');
-                }, variant: 'secondary' },
               { label: 'Change Movie', onClick: () => {
                   setSelectedMovie(null);
                   setSelectedDate(null);
                   navigate(`/${selectedRegion}`);
                 }, variant: 'secondary' },
-              { label: 'Change Date', onClick: () => {
-                  setSelectedDate(null);
-                  navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}`);
-                }, variant: 'secondary' },
               { label: 'Reload Data', onClick: () => setReloadKey((value) => value + 1), variant: 'secondary' }
             ]}
             rightActions={[
               { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'secondary' },
-              ...(dashboardData.hasAdvanceSnapshot ? [{
-                label: salesView === 'advance' ? 'Total Sales' : 'Advance Sales',
-                onClick: () => setSalesView((value) => value === 'total' ? 'advance' : 'total'),
-                variant: 'secondary'
-              }] : []),
               { label: diffMode === 'daily' ? 'Hourly Growth' : 'Daily Growth', onClick: () => setDiffMode((m) => (m === 'daily' ? 'hourly' : 'daily')), variant: 'secondary' },
               { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'primary', disabled: isGeneratingImg }
             ]}
@@ -721,183 +877,232 @@ function App() {
             @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Fandango • Excluding blocked seats.
           </div>
         </div>
-        </div>
+        </main>
       </>
     );
   };
 
   if (!selectedRegion) {
     return (
-      <>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <div className="container selection-page">
-        <div className="selection-intro">
-          <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
-          <h1 style={{ fontSize: '36px', marginTop: '8px' }}>Box-Office Tracking Portal</h1>
-          <p style={{ color: '#94a3b8', marginTop: '10px' }}>Choose a market</p>
-        </div>
+      <div className="site-frame">
+        {siteHeader}
+        <main key="home" className="site-main home-page">
+          <section className="home-hero">
+            <div className="home-hero-copy">
+              <div className="eyebrow"><span /> THE BOX OFFICE, IN FOCUS</div>
+              <h1>Every ticket tells<br /><span>a bigger story.</span></h1>
+              <p>
+                Follow the numbers behind the movies. Explore live ticket sales,
+                showtimes, occupancy and market momentum across India and the US.
+              </p>
+            </div>
+            <div className="home-hero-actions">
+              <button type="button" className="button-primary" onClick={() => handleSelectRegion('india')}>
+                Explore the Box Office
+                <span aria-hidden="true">↗</span>
+              </button>
+              <span className="home-updated-note"><span /> Live market data</span>
+            </div>
+            <div className="home-hero-art" aria-hidden="true">
+              <div className="hero-orbit hero-orbit-outer" />
+              <div className="hero-orbit hero-orbit-inner" />
+              <div className="hero-ticket">
+                <span className="hero-ticket-label">WEEKEND REPORT</span>
+                <strong>BOX<br />OFFICE</strong>
+                <span className="hero-ticket-rule" />
+                <span className="hero-ticket-footer">THE NUMBERS BEHIND THE MOVIES</span>
+              </div>
+              <span className="hero-spark hero-spark-one">✦</span>
+              <span className="hero-spark hero-spark-two">✦</span>
+            </div>
+            <div className="home-hero-index"><span>01</span> / MARKET OVERVIEW</div>
+          </section>
 
-        <div className="selection-grid selection-grid-markets">
-          {Object.entries(REGION_META).map(([key, meta]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handleSelectRegion(key)}
-              className="selection-card"
-                
-            >
-              <div className="selection-card-kicker">Market</div>
-              <div className="selection-card-title">{meta.label}</div>
-              <div className="selection-card-description">{meta.description}</div>
-            </button>
-          ))}
-        </div>
-        </div>
-      </>
+          <section className="market-section" aria-labelledby="market-heading">
+            <div className="section-heading">
+              <div>
+                <div className="eyebrow">PICK YOUR FRONT ROW</div>
+                <h2 id="market-heading">Choose a market</h2>
+              </div>
+              <p>One destination for the latest box-office pulse.</p>
+            </div>
+            <div className="selection-grid selection-grid-markets">
+              {Object.entries(REGION_META).map(([key, meta], index) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => handleSelectRegion(key)}
+                  className={`selection-card market-card market-card-${key}`}
+                >
+                  <span className="market-card-index">0{index + 1} / MARKET</span>
+                  <span className="market-card-title">{meta.label}</span>
+                  <span className="market-card-description">{meta.description}. Track movies, dates and live performance.</span>
+                  <span className="market-card-link">Explore market <span aria-hidden="true">↗</span></span>
+                  <span className="market-card-watermark" aria-hidden="true">{key === 'usa' ? 'US' : 'IN'}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="home-feature-strip" aria-label="Tracking features">
+            <div><span className="feature-number">01</span><strong>Live performance</strong><small>Follow sales as the story unfolds.</small></div>
+            <div><span className="feature-number">02</span><strong>Deep market detail</strong><small>Explore theatres, regions and showtimes.</small></div>
+            <div><span className="feature-number">03</span><strong>Built for movie people</strong><small>Clear insights, without the spreadsheet feel.</small></div>
+          </section>
+          <footer className="site-footer">THE WKND CINEMA <span>•</span> BOX OFFICE, BEAUTIFULLY IN FOCUS</footer>
+        </main>
+      </div>
     );
   }
 
   if (!selectedMovie) {
     return (
-      <>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <div className="container selection-page">
-        <div className="selection-header">
-          <div className="selection-header-content">
-            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
-            <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
-            <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Market</p>
-            <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{REGION_META[selectedRegion].label}</h2>
-          </div>
-          <div className="selection-nav-row">
-            <button className="selection-nav toggle-filter-btn" onClick={() => {
-              setSelectedMovie(null);
-              setSelectedRegion(null);
-              setSelectedDate(null);
-              navigate(`/`);
-            }}>Home</button>
-            <button className="selection-nav toggle-filter-btn" onClick={() => {
-              setSelectedRegion(null);
-              navigate('/');
-            }}>Back</button>
-          </div>
-        </div>
+      <div className="site-frame">
+        {siteHeader}
+        <main key={`market-${selectedRegion}`} className="site-main selection-page">
+          <div className="selection-breadcrumb"><button type="button" onClick={handleHome}>Overview</button><span>/</span><strong>{REGION_META[selectedRegion].label}</strong></div>
+          <section className="selection-heading">
+            <div>
+              <div className="eyebrow">{REGION_META[selectedRegion].label} BOX OFFICE</div>
+              <h1>Movies in focus<span>.</span></h1>
+              <p>Choose a title to explore its show dates, ticket sales and market performance.</p>
+            </div>
+            <div className="selection-heading-aside">
+              <span className="selection-heading-value">{movies.length.toString().padStart(2, '0')}</span>
+              <span className="selection-heading-label">Titles tracked</span>
+            </div>
+          </section>
 
-        {movieLoading ? (
-          <LoadingState label="Loading movies" />
-        ) : movieError ? (
-          <div style={{ color: '#f87171', padding: '20px' }}>{movieError}</div>
-        ) : movies.length === 0 ? (
-          <div style={{ color: '#f8fafc', padding: '20px' }}>No movies found for {REGION_META[selectedRegion].label}.</div>
-        ) : (
-          <>
-            {oldMovieIds.length > 0 && (
-              <div className="movie-list-tabs" role="group" aria-label="Movie list">
-                <button
-                  type="button"
-                  className={`movie-list-tab ${!showOldMovies ? 'active' : ''}`}
-                  aria-pressed={!showOldMovies}
-                  onClick={() => setShowOldMovies(false)}
-                >
-                  Current Movies
-                </button>
-                <button
-                  type="button"
-                  className={`movie-list-tab ${showOldMovies ? 'active' : ''}`}
-                  aria-pressed={showOldMovies}
-                  onClick={() => setShowOldMovies(true)}
-                >
-                  Old Movies
-                </button>
+          {movieLoading ? (
+            <div className="selection-state"><LoadingState label={`Loading ${REGION_META[selectedRegion].label} movies`} /></div>
+          ) : movieError ? (
+            <div className="selection-state selection-error" role="alert">{movieError}</div>
+          ) : movies.length === 0 ? (
+            <div className="selection-state">No movies found for {REGION_META[selectedRegion].label}.</div>
+          ) : (
+            <>
+              <div className="movie-toolbar">
+                <div className="movie-list-tabs" role="group" aria-label="Movie lifecycle">
+                  {[
+                    { id: 'coming_soon', label: 'Coming soon', count: comingSoonMovies.length },
+                    { id: 'now_playing', label: 'Now playing', count: currentMovies.length },
+                    { id: 'ended', label: 'Archive', count: oldMovies.length }
+                  ].map((shelf) => (
+                    <button
+                      key={shelf.id}
+                      type="button"
+                      className={`movie-list-tab ${activeMovieShelf === shelf.id ? 'active' : ''}`}
+                      aria-pressed={activeMovieShelf === shelf.id}
+                      onClick={() => setMovieShelf(shelf.id)}
+                    >
+                      {shelf.label} <span>{shelf.count}</span>
+                    </button>
+                  ))}
+                </div>
+                <label className="movie-search">
+                  <span aria-hidden="true">⌕</span>
+                  <input
+                    type="search"
+                    value={movieSearch}
+                    onChange={(event) => setMovieSearch(event.target.value)}
+                    placeholder="Find a movie"
+                    aria-label="Search movies"
+                  />
+                </label>
               </div>
-            )}
 
-            {displayedMovies.length > 0 ? (
-              <div className="selection-grid selection-grid-movies">
-                {displayedMovies.map((movie) => (
-                  <button
-                    key={movie.id}
-                    type="button"
-                    onClick={() => {
-                      setDateLoading(true);
-                      setDateError(null);
-                      setSelectedMovie(movie);
-                      navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
-                    }}
-                    className="selection-card"
-                  >
-                    <div className="selection-card-kicker">Movie</div>
-                    <div className="selection-card-title">{movie.name}</div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="movie-list-empty">
-                {showOldMovies
-                  ? 'No configured old movies were found for this market.'
-                  : 'No current movies found for this market.'}
-              </div>
-            )}
-          </>
-        )}
-        </div>
-      </>
+              {searchedMovies.length > 0 ? (
+                <div className="selection-grid selection-grid-movies">
+                  {searchedMovies.map((movie, index) => (
+                    <button
+                      key={movie.id}
+                      type="button"
+                      disabled={!movie.latestDate}
+                      onClick={() => {
+                        if (!movie.latestDate) return;
+                        setDateLoading(true);
+                        setDateError(null);
+                        setSelectedMovie(movie);
+                        navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
+                      }}
+                      className="selection-card movie-card"
+                    >
+                      <span className="movie-card-topline">
+                        <span>{movie.lifecycleStatus === 'coming_soon' ? 'COMING SOON' : movie.lifecycleStatus === 'ended' ? 'IN THE ARCHIVE' : 'NOW PLAYING'}</span>
+                        <span>{String(index + 1).padStart(2, '0')}</span>
+                      </span>
+                      <span className="movie-card-title">{movie.name}</span>
+                      <span className="movie-card-latest">
+                        {movie.releaseDate
+                          ? (
+                            <>
+                              <span>{movie.lifecycleStatus === 'coming_soon' ? 'Releases' : 'Released'}</span>
+                              <span>{movie.releaseDate}</span>
+                            </>
+                          )
+                          : movie.latestDate
+                            ? (
+                              <>
+                                <span>Latest tracked showdate</span>
+                                <span>{movie.latestDate}</span>
+                              </>
+                            )
+                            : 'Sales tracking begins when reports are available'}
+                      </span>
+                      <span className="movie-card-link">
+                        {movie.latestDate ? 'View box-office report' : 'Report not available yet'}
+                        <span aria-hidden="true">{movie.latestDate ? '↗' : '—'}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="selection-state">
+                  {movieSearch.trim()
+                    ? `No titles match “${movieSearch.trim()}”. Try another search.`
+                    : activeMovieShelf === 'coming_soon'
+                      ? 'No upcoming titles yet. Add a movie with lifecycleStatus set to coming_soon to feature it here.'
+                      : activeMovieShelf === 'ended'
+                        ? 'No archived titles found for this market.'
+                        : 'No now-playing titles found for this market.'}
+                </div>
+              )}
+            </>
+          )}
+          <footer className="site-footer">THE WKND CINEMA <span>•</span> {REGION_META[selectedRegion].label} MARKET</footer>
+        </main>
+      </div>
     );
   }
 
   if (!selectedDate) {
     return (
-      <>
-        <ThemeToggle theme={theme} onToggle={toggleTheme} />
-        <div className="container selection-page">
-        <div className="selection-header">
-          <div className="selection-header-content">
-            <p style={{ color: '#f43f5e', letterSpacing: '0.16em', textTransform: 'uppercase', fontSize: '16px', fontWeight: 700 }}>TheWkndCinema</p>
-            <h1 style={{ fontSize: '36px', marginTop: '8px', marginBottom: '14px' }}>Box-Office Tracking Portal</h1>
-            <p style={{ color: '#94a3b8', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>Movie</p>
-            <h2 style={{ fontSize: '28px', marginTop: '8px' }}>{selectedMovie.name}</h2>
+      <div className="site-frame">
+        {siteHeader}
+        <main key={`movie-${selectedRegion}-${selectedMovieId}`} className="site-main selection-page">
+          <div className="selection-breadcrumb">
+            <button type="button" onClick={handleHome}>Overview</button><span>/</span>
+            <button type="button" onClick={() => navigate(`/${selectedRegion}`)}>{REGION_META[selectedRegion].label}</button><span>/</span>
+            <strong>{selectedMovie.name}</strong>
           </div>
-          <div className="selection-nav-row">
-            <button className="selection-nav toggle-filter-btn" onClick={() => {
-              setSelectedMovie(null);
-              setSelectedRegion(null);
-              setSelectedDate(null);
-              navigate(`/`);
-            }}>Home</button>
-            <button className="selection-nav toggle-filter-btn" onClick={() => {
-              setSelectedMovie(null);
-              navigate(`/${selectedRegion}`);
-            }}>Back</button>
-          </div>
-        </div>
-
-        {dateLoading ? (
-          <LoadingState label="Loading dates" />
-        ) : dateError ? (
-          <div style={{ color: '#f87171', padding: '20px' }}>{dateError}</div>
-        ) : dates.length === 0 ? (
-          <div style={{ color: '#f8fafc', padding: '20px' }}>No dates found for this movie.</div>
-        ) : (
-          <div className="selection-grid selection-grid-dates">
-            {dates.map((date) => (
-              <button
-                key={date}
-                type="button"
-                onClick={() => {
-                  setSelectedDate(date);
-                  navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovie.id)}/${encodeURIComponent(date)}`);
-                }}
-                className="selection-card"
-                
-              >
-                <div className="selection-card-kicker">Date</div>
-                <div className="selection-card-title">{date}</div>
-              </button>
-            ))}
-          </div>
-        )}
-        </div>
-      </>
+          <section className="selection-heading">
+            <div>
+              <div className="eyebrow">{REGION_META[selectedRegion].label} BOX OFFICE</div>
+              <h1>{selectedMovie.name}<span>.</span></h1>
+              <p>Opening the latest available box-office report.</p>
+            </div>
+          </section>
+          {dateLoading || dates.length === 0 ? (
+            <div className="selection-state">
+              {dateError
+                ? <span className="selection-error" role="alert">{dateError}</span>
+                : dateLoading || movieLoading
+                  ? <LoadingState label="Loading the latest report" />
+                  : 'No report dates are available for this movie.'}
+            </div>
+          ) : <div className="selection-state"><LoadingState label="Opening the latest report" /></div>}
+        </main>
+      </div>
     );
   }
 
