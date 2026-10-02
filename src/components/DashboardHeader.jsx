@@ -223,8 +223,8 @@ export const DashboardHeader = ({
           <div className="dashboard-date-action">
             <label className="dashboard-date-control">
               <span className="dashboard-header-label">
-                <span className="dashboard-date-label-full">REPORT DATE</span>
-                <span className="dashboard-date-label-mobile">DATE</span>
+                <span className="dashboard-date-label-full">SHOW DATE</span>
+                <span className="dashboard-date-label-mobile">SHOW DATE</span>
               </span>
               <span className="dashboard-date-select-wrap">
                 <select

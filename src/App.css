@@ -2375,9 +2375,9 @@ tr:hover td {
 }
 
 .site-brand {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 11px;
   flex: 0 0 auto;
   padding: 0;
   border: 0;
@@ -2387,36 +2387,14 @@ tr:hover td {
   cursor: pointer;
 }
 
-.site-brand-mark {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid rgba(245, 158, 11, 0.52);
-  border-radius: 11px;
-  background: linear-gradient(145deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.04));
-  color: #ffc45c;
-  font-size: 21px;
-  font-weight: 850;
-  letter-spacing: -0.08em;
-}
-
-.site-brand-copy {
-  display: grid;
-  gap: 4px;
-}
-
-.site-brand-copy strong {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.site-brand-copy small {
-  color: #8ea0b7;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.17em;
+.site-brand-logo {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 166px;
+  height: auto;
+  flex: 0 0 auto;
+  object-fit: contain;
 }
 
 .site-nav,
@@ -2507,6 +2485,10 @@ tr:hover td {
   position: static;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 76px;
+  min-width: 76px;
+  flex: 0 0 76px;
   gap: 7px;
   min-height: 36px;
   padding: 0 11px;
@@ -2709,6 +2691,15 @@ tr:hover td {
   font-size: 8px;
   font-weight: 800;
   letter-spacing: 0.16em;
+}
+
+.hero-ticket-logo {
+  display: block;
+  width: 72%;
+  height: auto;
+  max-height: 46px;
+  align-self: center;
+  object-fit: contain;
 }
 
 .hero-ticket strong {
@@ -3097,7 +3088,7 @@ tr:hover td {
   overflow: hidden;
   margin-top: 25px;
   color: #f2f5f8;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 760;
   letter-spacing: -0.045em;
   line-height: 1.2;
@@ -3108,9 +3099,14 @@ tr:hover td {
 }
 
 .movie-card-latest {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 3px;
   margin-top: 9px;
   color: #92a2b4;
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 1.35;
   text-align: left;
 }
 
@@ -3201,13 +3197,26 @@ tr:hover td {
   background: rgba(249, 251, 253, 0.92);
 }
 
-:root[data-theme='light'] .site-brand,
+:root[data-theme='light'] .site-brand {
+  background: none;
+}
+
+:root[data-theme='light'] .site-brand::before {
+  position: absolute;
+  inset: -4px -7px;
+  border-radius: 8px;
+  background: #101722;
+  box-shadow: 0 2px 8px rgba(16, 23, 34, 0.16);
+  content: '';
+  pointer-events: none;
+}
+
 :root[data-theme='light'] .site-nav button.active,
 :root[data-theme='light'] .site-nav button:hover {
   color: #152334;
 }
 
-:root[data-theme='light'] .site-brand-copy small,
+
 :root[data-theme='light'] .site-live-indicator {
   color: #617387;
 }
@@ -3315,6 +3324,14 @@ tr:hover td {
 }
 
 @media (max-width: 640px) {
+  .movie-card-title {
+    font-size: 17px;
+  }
+
+  .movie-card-latest {
+    font-size: 11px;
+  }
+
   .site-header-inner {
     width: calc(100% - 26px);
     min-height: 64px;
@@ -3322,18 +3339,8 @@ tr:hover td {
     gap: 0 8px;
   }
 
-  .site-brand-mark {
-    width: 33px;
-    height: 33px;
-    font-size: 18px;
-  }
-
-  .site-brand-copy strong {
-    font-size: 10px;
-  }
-
-  .site-brand-copy small {
-    font-size: 7px;
+  .site-brand-logo {
+    width: 132px;
   }
 
   .site-nav {
@@ -3396,6 +3403,10 @@ tr:hover td {
     width: 164px;
     min-height: 208px;
     padding: 17px;
+  }
+
+  .hero-ticket-logo {
+    max-height: 38px;
   }
 
   .hero-ticket strong {
@@ -3701,13 +3712,8 @@ tr:hover td {
 }
 
 @media (max-width: 370px) {
-  .site-brand-copy strong {
-    font-size: 9px;
-    letter-spacing: 0.08em;
-  }
-
-  .site-brand-copy small {
-    font-size: 6px;
+  .site-brand-logo {
+    width: 120px;
   }
 
   .theme-toggle {
@@ -3760,6 +3766,10 @@ tr:hover td {
     width: 140px;
     min-height: 178px;
     padding: 14px;
+  }
+
+  .hero-ticket-logo {
+    max-height: 32px;
   }
 
   .hero-ticket strong {
@@ -4275,8 +4285,13 @@ tr:hover td {
     border-radius: 7px;
   }
 
+  .hero-ticket-logo {
+    width: 76%;
+    max-height: 25px;
+  }
+
   .hero-ticket strong {
-    font-size: 26px;
+    font-size: 23px;
   }
 
   .hero-ticket-label,
@@ -5366,9 +5381,12 @@ tr:hover td {
     animation: mobile-ticket-float 5s ease-in-out infinite;
   }
 
+  .hero-ticket-logo {
+    max-height: 22px;
+  }
+
   .hero-ticket strong {
-    font-size: 23px;
-    letter-spacing: -0.09em;
+    font-size: 21px;
   }
 
   .hero-ticket-label,
@@ -5487,14 +5505,6 @@ tr:hover td {
 
   .selection-page .selection-grid-movies {
     margin-bottom: 24px;
-  }
-
-  .movie-card-latest {
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 3px;
-    line-height: 1.35;
   }
 
   .dashboard-header-main--single-update .dashboard-header-movie-controls {
@@ -6406,6 +6416,36 @@ html.is-route-loading body {
   overflow: hidden !important;
 }
 
+html.theme-transitioning-to-light::after,
+html.theme-transitioning-to-dark::after {
+  position: fixed;
+  z-index: 2147483647;
+  inset: 0;
+  pointer-events: none;
+  content: '';
+  animation: theme-overlay-fade 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+html.theme-transitioning-to-light::after {
+  background: #030914;
+}
+
+html.theme-transitioning-to-dark::after {
+  background: #eef3f8;
+}
+
+@keyframes theme-overlay-fade {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning-to-light::after,
+  html.theme-transitioning-to-dark::after {
+    animation-duration: 0.01ms;
+  }
+}
+
 .site-frame {
   display: flex;
   flex: 1 0 auto;
@@ -6458,5 +6498,103 @@ html.is-route-loading body {
 
   .site-frame > .site-main.home-page .site-footer {
     margin-top: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-header-inner {
+    min-height: 52px;
+    flex-wrap: nowrap;
+    gap: 5px;
+    padding-block: 5px;
+  }
+
+  .site-brand-logo {
+    width: 96px;
+  }
+
+  .site-nav {
+    align-self: center;
+    order: 0;
+    width: auto;
+    min-width: max-content;
+    height: 40px;
+    min-height: 40px;
+    flex: 0 0 auto;
+    gap: 2px;
+    margin: 0;
+    padding: 3px;
+  }
+
+  .site-nav button,
+  .site-nav button.active {
+    min-width: 60px;
+    min-height: 32px;
+    padding-inline: 8px;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  .site-nav-divider,
+  .site-live-indicator {
+    display: none;
+  }
+
+  .site-header-tools {
+    min-height: 0;
+    flex: 0 0 auto;
+    margin-left: 0;
+  }
+
+  .theme-toggle {
+    position: static;
+    inset: auto;
+    width: 30px;
+    min-width: 30px;
+    flex-basis: 30px;
+    height: 30px;
+    min-height: 30px;
+    gap: 0;
+    padding: 0;
+    border-radius: 8px;
+    font-size: 0;
+  }
+
+  .theme-toggle span {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 370px) {
+  .site-brand-logo {
+    width: 80px;
+  }
+
+  .site-nav button,
+  .site-nav button.active {
+    min-width: 52px;
+    padding-inline: 5px;
+    font-size: 9px;
+  }
+
+  .theme-toggle {
+    width: 28px;
+    min-width: 28px;
+    flex-basis: 28px;
+    height: 28px;
+    min-height: 28px;
+  }
+}
+
+@media (max-width: 340px) {
+  .site-brand-logo {
+    width: 72px;
+  }
+
+  .site-nav button,
+  .site-nav button.active {
+    min-width: 48px;
+    padding-inline: 3px;
+    font-size: 8px;
   }
 }

@@ -34,11 +34,7 @@ const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegi
   <header className="site-header">
     <div className="site-header-inner">
       <button className="site-brand" type="button" onClick={onHome} aria-label="The Wknd Cinema home">
-        <span className="site-brand-mark" aria-hidden="true">W</span>
-        <span className="site-brand-copy">
-          <strong>THE WKND CINEMA</strong>
-          <small>BOX OFFICE INTELLIGENCE</small>
-        </span>
+        <img className="site-brand-logo" src="/appicon.png" alt="" />
       </button>
 
       <nav className="site-nav" aria-label="Main navigation">
@@ -231,13 +227,24 @@ function App() {
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [homeTransitionLoading, setHomeTransitionLoading] = useState(false);
+  const [openingDashboard, setOpeningDashboard] = useState(false);
+  const themeTransitionTimeoutRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem('bo-tracker-theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+  const toggleTheme = () => {
+    const root = document.documentElement;
+    root.classList.remove('theme-transitioning-to-light', 'theme-transitioning-to-dark');
+    root.classList.add(theme === 'dark' ? 'theme-transitioning-to-light' : 'theme-transitioning-to-dark');
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
+    window.clearTimeout(themeTransitionTimeoutRef.current);
+    themeTransitionTimeoutRef.current = window.setTimeout(() => {
+      root.classList.remove('theme-transitioning-to-light', 'theme-transitioning-to-dark');
+    }, 560);
+  };
 
   useEffect(() => {
     const nextMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
@@ -454,7 +461,7 @@ function App() {
     ? indiaDashboardData.movieName === selectedMovieId && indiaDashboardData.showDate === selectedDateValue
     : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue && metadata?.salesMode === salesView;
   const dashboardLoading = loading || !dashboardIsCurrent;
-  const routeContentLoading = movieLoading || dateLoading || (shouldFetchDashboard && dashboardLoading);
+  const routeContentLoading = movieLoading || dateLoading || openingDashboard || (shouldFetchDashboard && dashboardLoading);
 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -482,8 +489,34 @@ function App() {
     return () => window.clearTimeout(timeoutId);
   }, [homeTransitionLoading]);
 
+  useEffect(() => {
+    if (!openingDashboard) return;
+
+    if (
+      !selectedRegion ||
+      !selectedMovie ||
+      (shouldFetchDashboard && !dashboardLoading) ||
+      dateError ||
+      (!dateLoading && !selectedDate && dates.length === 0)
+    ) {
+      setOpeningDashboard(false);
+    }
+  }, [
+    dashboardLoading,
+    dateError,
+    dateLoading,
+    dates.length,
+    openingDashboard,
+    selectedDate,
+    selectedMovie,
+    selectedRegion,
+    shouldFetchDashboard
+  ]);
+
   useEffect(() => () => {
     document.documentElement.classList.remove('is-route-loading');
+    document.documentElement.classList.remove('theme-transitioning-to-light', 'theme-transitioning-to-dark');
+    window.clearTimeout(themeTransitionTimeoutRef.current);
   }, []);
 
   useEffect(() => {
@@ -689,6 +722,7 @@ function App() {
     window.scrollTo(0, 0);
     document.documentElement.classList.add('is-route-loading');
     setHomeTransitionLoading(false);
+    setOpeningDashboard(false);
     setSelectedRegion(key);
     setMovies([]);
     setMovieShelf('now_playing');
@@ -707,6 +741,7 @@ function App() {
   const handleHome = () => {
     window.scrollTo(0, 0);
     setHomeTransitionLoading(Boolean(selectedRegion));
+    setOpeningDashboard(false);
     setSelectedDate(null);
     setSelectedMovie(null);
     setSelectedRegion(null);
@@ -909,6 +944,17 @@ function App() {
     );
   };
 
+  if (openingDashboard && selectedRegion) {
+    return (
+      <div className="site-frame">
+        {siteHeader}
+        <main className="site-main dashboard-loading">
+          <LoadingState label={`Loading ${regionTitle} data`} />
+        </main>
+      </div>
+    );
+  }
+
   if (!selectedRegion) {
     return (
       <div className="site-frame">
@@ -934,6 +980,7 @@ function App() {
               <div className="hero-orbit hero-orbit-outer" />
               <div className="hero-orbit hero-orbit-inner" />
               <div className="hero-ticket">
+                <img className="hero-ticket-logo" src="/appicon.png" alt="" />
                 <span className="hero-ticket-label">WEEKEND REPORT</span>
                 <strong>BOX<br />OFFICE</strong>
                 <span className="hero-ticket-rule" />
@@ -1042,8 +1089,13 @@ function App() {
                       disabled={!movie.latestDate}
                       onClick={() => {
                         if (!movie.latestDate) return;
+                        window.scrollTo(0, 0);
+                        setOpeningDashboard(true);
                         setDateLoading(true);
                         setDateError(null);
+                        setDates([]);
+                        setDatesBySalesMode({ total: [], advance: [] });
+                        setSelectedDate(null);
                         setSelectedMovie(movie);
                         navigate(`/${selectedRegion}/${encodeURIComponent(movie.id)}`);
                       }}
@@ -1120,7 +1172,7 @@ function App() {
                 ? <span className="selection-error" role="alert">{dateError}</span>
                 : dateLoading || movieLoading
                   ? <LoadingState label="Loading the latest report" />
-                  : 'No report dates are available for this movie.'}
+                  : 'No show dates are available for this movie.'}
             </div>
           ) : <div className="selection-state"><LoadingState label="Opening the latest report" /></div>}
         </main>
