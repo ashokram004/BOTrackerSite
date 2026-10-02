@@ -28,7 +28,7 @@ const getOccupancyColor = (occ) => {
   return '#f87171';
 };
 
-export const KPIGrid = ({ kpis }) => {
+export const KPIGrid = ({ kpis, showGrowth = true }) => {
   if (!kpis) return null;
 
   const dGross = formatDelta(kpis.totalGross.delta, true);
@@ -44,27 +44,27 @@ export const KPIGrid = ({ kpis }) => {
   return (
     <div className="kpi-grid us-kpi-grid">
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Total Gross</div><div className={`kpi-sub ${dGross.class}`} style={{ color: '#4ade80' }}>{dGross.text}</div></div>
+        <div className="kpi-head"><div className="kpi-title">Total Gross</div>{showGrowth && <div className={`kpi-sub ${dGross.class}`} style={{ color: '#4ade80' }}>{dGross.text}</div>}</div>
         <div className="kpi-value">{formatCurrency(kpis.totalGross.val)}</div>
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Tickets Sold</div><div className={`kpi-sub ${dTickets.class}`} style={{ color: '#4ade80' }}>{dTickets.text}</div></div>
+        <div className="kpi-head"><div className="kpi-title">Tickets Sold</div>{showGrowth && <div className={`kpi-sub ${dTickets.class}`} style={{ color: '#4ade80' }}>{dTickets.text}</div>}</div>
         <div className="kpi-value">{kpis.totalBooked.val.toLocaleString()}</div>
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Total Venues</div><div className={`kpi-sub ${dVenues.class}`} style={{ color: '#4ade80' }}>{dVenues.text}</div></div>
+        <div className="kpi-head"><div className="kpi-title">Total Venues</div>{showGrowth && <div className={`kpi-sub ${dVenues.class}`} style={{ color: '#4ade80' }}>{dVenues.text}</div>}</div>
         <div className="kpi-value">{kpis.totalVenues.val.toLocaleString()}</div>
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Total Shows</div><div className={`kpi-sub ${dShows.class}`} style={{ color: '#4ade80' }}>{dShows.text}</div></div>
+        <div className="kpi-head"><div className="kpi-title">Total Shows</div>{showGrowth && <div className={`kpi-sub ${dShows.class}`} style={{ color: '#4ade80' }}>{dShows.text}</div>}</div>
         <div className="kpi-value">{kpis.totalShows.val.toLocaleString()}</div>
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Overall Occupancy</div><div className={`kpi-sub ${dShows.class}`}></div></div>
+        <div className="kpi-head"><div className="kpi-title">Overall Occupancy</div></div>
         <div
           className="kpi-value"
           style={{ color: getOccupancyColor(kpis.occupancy.val) }}
@@ -74,7 +74,7 @@ export const KPIGrid = ({ kpis }) => {
       </div>
 
       <div className="kpi-card">
-        <div className="kpi-head"><div className="kpi-title">Avg Ticket Price</div><div className={`kpi-sub ${dShows.class}`}></div></div>
+        <div className="kpi-head"><div className="kpi-title">Avg Ticket Price</div></div>
         <div className="kpi-value">${avgTicketPrice.toFixed(0)}</div>
       </div>
     </div>

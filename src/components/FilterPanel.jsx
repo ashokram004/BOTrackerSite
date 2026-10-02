@@ -6,7 +6,9 @@ export const FilterPanel = ({
   rawRows,
   filters,
   setFilters,
-  showFilters
+  showFilters,
+  diffMode,
+  onDiffModeChange
 }) => {
   const uniqueValues = useMemo(() => {
     const rows = (rawRows || []).filter((r) => !(r.is_extra || r.t_id === 'EXTRA'));
@@ -39,6 +41,18 @@ export const FilterPanel = ({
   return (
     <div className={`filter-panel multi-select-panel ${!showFilters ? 'hidden' : ''}`}>
       <div className="filter-grid">
+        <label className="growth-comparison-filter">
+          <span className="filter-label">Growth Comparison</span>
+          <select
+            className="filter-select"
+            value={diffMode}
+            onChange={(event) => onDiffModeChange?.(event.target.value)}
+          >
+            <option value="hourly">Since Previous Run</option>
+            <option value="daily">Daily</option>
+          </select>
+        </label>
+
         <MultiSelectFilter
           label="State"
           allLabel="All States"

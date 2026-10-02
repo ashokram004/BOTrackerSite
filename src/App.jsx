@@ -220,6 +220,7 @@ function App() {
   const [dateLoading, setDateLoading] = useState(Boolean(routeMovie && !routeDate));
   const [dateError, setDateError] = useState(null);
   const [diffMode, setDiffMode] = useState('hourly');
+  const [showUsGrowth, setShowUsGrowth] = useState(false);
   const [salesModeState, setSalesModeState] = useState({
     movieId: routeMovie?.id || '',
     mode: 'total'
@@ -229,6 +230,7 @@ function App() {
   const salesView = salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'total';
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
+  const [homeTransitionLoading, setHomeTransitionLoading] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -393,8 +395,8 @@ function App() {
   const shouldFetchDashboard = Boolean(selectedRegion && selectedMovie && selectedDate);
   const selectedModeDates = datesBySalesMode[salesView] || [];
   const salesModeOptions = [
-    { value: 'total', label: 'Current sales', disabled: datesBySalesMode.total.length === 0 },
-    { value: 'advance', label: 'Advance sales', disabled: datesBySalesMode.advance.length === 0 }
+    { value: 'total', label: 'Current sales', mobileLabel: 'Current Sales', disabled: datesBySalesMode.total.length === 0 },
+    { value: 'advance', label: 'Advance sales', mobileLabel: 'Advance Sales', disabled: datesBySalesMode.advance.length === 0 }
   ];
   const comingSoonMovies = movies.filter((movie) => movie.lifecycleStatus === 'coming_soon');
   const currentMovies = movies.filter((movie) => movie.lifecycleStatus === 'now_playing');
@@ -423,7 +425,7 @@ function App() {
     region: selectedRegion || 'usa',
     movieSlug: selectedMovieId,
     showDate: selectedDateValue,
-    includeDifferences: selectedRegion !== 'india',
+    includeDifferences: selectedRegion === 'usa' && showUsGrowth,
     enabled: shouldFetchDashboard && selectedRegion !== 'india',
     refreshKey: reloadKey
   });
@@ -452,6 +454,7 @@ function App() {
     ? indiaDashboardData.movieName === selectedMovieId && indiaDashboardData.showDate === selectedDateValue
     : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue && metadata?.salesMode === salesView;
   const dashboardLoading = loading || !dashboardIsCurrent;
+  const routeContentLoading = movieLoading || dateLoading || (shouldFetchDashboard && dashboardLoading);
 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -467,6 +470,21 @@ function App() {
     timeStart: '',
     timeEnd: ''
   });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('is-route-loading', routeContentLoading || homeTransitionLoading);
+  }, [homeTransitionLoading, routeContentLoading]);
+
+  useEffect(() => {
+    if (!homeTransitionLoading) return undefined;
+
+    const timeoutId = window.setTimeout(() => setHomeTransitionLoading(false), 520);
+    return () => window.clearTimeout(timeoutId);
+  }, [homeTransitionLoading]);
+
+  useEffect(() => () => {
+    document.documentElement.classList.remove('is-route-loading');
+  }, []);
 
   useEffect(() => {
     if (!lastLiveUpdate || selectedRegion !== 'usa') {
@@ -668,6 +686,9 @@ function App() {
   const regionTitle = selectedRegion ? REGION_META[selectedRegion]?.label : 'Box Office Tracker';
 
   const handleSelectRegion = (key) => {
+    window.scrollTo(0, 0);
+    document.documentElement.classList.add('is-route-loading');
+    setHomeTransitionLoading(false);
     setSelectedRegion(key);
     setMovies([]);
     setMovieShelf('now_playing');
@@ -684,6 +705,8 @@ function App() {
   };
 
   const handleHome = () => {
+    window.scrollTo(0, 0);
+    setHomeTransitionLoading(Boolean(selectedRegion));
     setSelectedDate(null);
     setSelectedMovie(null);
     setSelectedRegion(null);
@@ -799,13 +822,13 @@ function App() {
                   setSelectedMovie(null);
                   setSelectedDate(null);
                   navigate(`/${selectedRegion}`);
-                }, variant: 'secondary' },
-              { label: 'Reload Data', onClick: () => setReloadKey((value) => value + 1), variant: 'secondary' }
+                }, variant: 'secondary', mobileLabel: 'Change Movie' },
+              { label: 'Reload Data', onClick: () => setReloadKey((value) => value + 1), variant: 'secondary', mobileLabel: 'Reload Data' }
             ]}
             rightActions={[
-              { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'secondary' },
-              { label: diffMode === 'daily' ? 'Hourly Growth' : 'Daily Growth', onClick: () => setDiffMode((m) => (m === 'daily' ? 'hourly' : 'daily')), variant: 'secondary' },
-              { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'primary', disabled: isGeneratingImg }
+              { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'secondary', isActive: showFilters, mobileLabel: 'Filters', mobileIcon: 'filter' },
+              { label: 'Growth', ariaLabel: showUsGrowth ? 'Hide growth details' : 'Show growth details', onClick: () => setShowUsGrowth((value) => !value), variant: 'secondary', isActive: showUsGrowth, neutralHoverWhenInactive: true, activeStyle: 'dashboard-action-btn--growth-active', mobileLabel: 'Growth', mobileIcon: 'growth' },
+              { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'primary', disabled: isGeneratingImg, mobileLabel: isGeneratingImg ? 'Wait' : 'Export', mobileIcon: 'export' }
             ]}
           />
 
@@ -815,29 +838,33 @@ function App() {
               filters={filters}
               setFilters={setFilters}
               showFilters={showFilters}
+              diffMode={diffMode}
+              onDiffModeChange={setDiffMode}
             />
           )}
 
-          <KPIGrid kpis={displayedKpis} />
+          <KPIGrid kpis={displayedKpis} showGrowth={showUsGrowth} />
 
           <div className="dashboard-row">
-            {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat />}
-            {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage />}
+            {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat showGrowth={showUsGrowth} />}
+            {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage showGrowth={showUsGrowth} />}
           </div>
 
           <div className="dashboard-row">
-            {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState />}
-            {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater />}
+            {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState showGrowth={showUsGrowth} />}
+            {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater showGrowth={showUsGrowth} />}
           </div>
 
           <div className="dashboard-row">
             <DataTable
               title="Theatre Chain Breakdown"
               data={displayedTables?.chains || []}
+              showGrowth={showUsGrowth}
             />
             <DataTable
               title="Time of Day Breakdown"
               data={displayedTables?.timeCats || []}
+              showGrowth={showUsGrowth}
             />
           </div>
 
@@ -860,7 +887,7 @@ function App() {
           {includeDifferences && differences && (
             <div className="differences-container" style={{ marginTop: '40px' }}>
               <h2 style={{ fontSize: '24px', marginBottom: '20px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                Difference Details ({diffMode === 'hourly' ? 'Hourly' : 'Daily'})
+                Difference Details ({diffMode === 'hourly' ? 'Since Previous Run' : 'Daily'})
               </h2>
               <div className="dashboard-row">
                 <DifferenceTable title="New Shows Added" data={differences.addedShows} type="added" />
@@ -874,7 +901,7 @@ function App() {
           )}
 
           <div className="footer">
-            @TheWkndCinema • {REGION_META[selectedRegion]?.label || 'Box Office'} • Data from Fandango • Excluding blocked seats.
+            @TheWkndCinema • Data from Fandango • Excluding blocked seats.
           </div>
         </div>
         </main>
@@ -944,12 +971,7 @@ function App() {
             </div>
           </section>
 
-          <section className="home-feature-strip" aria-label="Tracking features">
-            <div><span className="feature-number">01</span><strong>Live performance</strong><small>Follow sales as the story unfolds.</small></div>
-            <div><span className="feature-number">02</span><strong>Deep market detail</strong><small>Explore theatres, regions and showtimes.</small></div>
-            <div><span className="feature-number">03</span><strong>Built for movie people</strong><small>Clear insights, without the spreadsheet feel.</small></div>
-          </section>
-          <footer className="site-footer">THE WKND CINEMA <span>•</span> BOX OFFICE, BEAUTIFULLY IN FOCUS</footer>
+          <footer className="site-footer">THE WKND CINEMA <span>•</span> BOX OFFICE IN FOCUS</footer>
         </main>
       </div>
     );
