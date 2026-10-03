@@ -263,7 +263,7 @@ function App() {
   const [dateLoading, setDateLoading] = useState(Boolean(routeMovie && !routeDate));
   const [dateError, setDateError] = useState(null);
   const [diffMode, setDiffMode] = useState('hourly');
-  const [showUsGrowth, setShowUsGrowth] = useState(false);
+  const [showUsGrowth, setShowUsGrowth] = useState(true);
   const [salesModeState, setSalesModeState] = useState({
     movieId: routeMovie?.id || '',
     mode: 'total'
