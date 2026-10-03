@@ -256,7 +256,7 @@ export const PacingChart = ({ historyData }) => {
 
         {/* Hover Tooltip */}
         {hoveredData && (
-          <div style={{
+          <div className="pacing-chart-tooltip" style={{
             position: 'absolute',
             top: '20px',
             right: '20px',

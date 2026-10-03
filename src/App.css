@@ -2318,6 +2318,20 @@ tr:hover td {
   color: #172333;
 }
 
+:root[data-theme='light'] .gross-growth-tooltip,
+:root[data-theme='light'] .pacing-chart-tooltip {
+  background-color: rgba(255, 255, 255, 0.97) !important;
+  border-color: rgba(71, 99, 126, 0.28) !important;
+  color: #172333 !important;
+  box-shadow: 0 12px 30px rgba(35, 52, 71, 0.2) !important;
+}
+
+:root[data-theme='light'] .gross-growth-tooltip .pacing-tooltip-title,
+:root[data-theme='light'] .pacing-chart-tooltip .pacing-tooltip-title {
+  border-bottom-color: rgba(71, 99, 126, 0.24) !important;
+  color: #172333;
+}
+
 :root[data-theme='light'] .filter-select {
   background: rgba(255, 255, 255, 0.9);
   border-color: rgba(71, 99, 126, 0.3);
@@ -6479,6 +6493,49 @@ html.theme-transitioning-to-dark::after {
 
 .dashboard-page > .container > .footer {
   margin-top: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :root[data-theme='light'] .site-main button:hover:not(:disabled),
+  :root[data-theme='light'] .site-header button:hover:not(:disabled) {
+    border-color: #b66a0a;
+    background-color: #ffedc2;
+    color: #422b0a;
+    box-shadow: 0 5px 14px rgba(88, 59, 15, 0.2);
+    transform: translateY(-2px);
+  }
+
+  :root[data-theme='light'] .site-nav button:hover:not(:disabled) {
+    border-color: #c7821d;
+    background: linear-gradient(180deg, #fff0ca, #ffdf9b);
+    color: #422b0a;
+    box-shadow: 0 3px 10px rgba(88, 59, 15, 0.16);
+  }
+
+  :root[data-theme='light'] .site-main .dashboard-header-right-actions > .dashboard-action-btn[aria-pressed='true']:hover:not(:disabled) {
+    border-color: #ad690e;
+    background: #ffdf9b;
+    color: #422b0a;
+    box-shadow: 0 4px 12px rgba(88, 59, 15, 0.2);
+  }
+
+  :root[data-theme='light'] .site-main .selection-card:hover:not(:disabled) {
+    border-color: #b66a0a !important;
+    background: linear-gradient(145deg, #fff4d9, #ffe4ad) !important;
+    box-shadow: 0 12px 26px rgba(72, 52, 20, 0.2) !important;
+    color: #422b0a;
+    transform: translateY(-3px);
+  }
+
+  :root[data-theme='light'] .site-main .kpi-card:hover,
+  :root[data-theme='light'] .site-main .summary-section:hover {
+    border-color: rgba(71, 99, 126, 0.42);
+    box-shadow: 0 18px 38px rgba(46, 67, 88, 0.22);
+  }
+
+  :root[data-theme='light'] .site-main tr:hover td {
+    background-color: #e1ebf5;
+  }
 }
 
 @media (min-width: 901px) {

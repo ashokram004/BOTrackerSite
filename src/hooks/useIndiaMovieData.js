@@ -234,16 +234,6 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     let active = true;
 
     if (refreshKey > 0) sessionIndiaDashboardCache.delete(cacheKey);
-    let frameId;
-    let timerId;
-    if (sessionIndiaDashboardCache.has(cacheKey)) {
-      const cachedData = sessionIndiaDashboardCache.get(cacheKey);
-      frameId = requestAnimationFrame(() => {
-        timerId = setTimeout(() => {
-          if (active) setData(cachedData);
-        }, 100);
-      });
-    }
 
     let latestRows = [];
     let latestAdvanceRows = [];
@@ -367,8 +357,6 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
 
     return () => {
       active = false;
-      cancelAnimationFrame(frameId);
-      clearTimeout(timerId);
       unsubscribe();
       unsubscribePoster();
       unsubscribeHistory();
@@ -376,5 +364,7 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     };
   }, [enabled, movieSlug, showDate, refreshKey]);
 
-  return useMemo(() => data, [data]);
+  const cacheKey = `${movieSlug}/${showDate}`;
+  const cachedData = sessionIndiaDashboardCache.get(cacheKey);
+  return useMemo(() => cachedData || data, [cachedData, data]);
 };

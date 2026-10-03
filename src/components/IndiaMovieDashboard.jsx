@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
@@ -151,7 +151,7 @@ const getSourceClass = (source = 'Unknown') => {
   return 'src-dist';
 };
 
-export const IndiaMovieDashboard = ({
+export const IndiaMovieDashboard = memo(({
   rows = [],
   historyData = [],
   salesView = 'total',
@@ -1578,4 +1578,4 @@ export const IndiaMovieDashboard = ({
       </div>
     </main>
   );
-};
+});

@@ -28,7 +28,7 @@ const getOccupancyColor = (occ) => {
   return '#f87171';
 };
 
-export const KPIGrid = ({ kpis, showGrowth = true }) => {
+export const KPIGrid = memo(({ kpis, showGrowth = true }) => {
   if (!kpis) return null;
 
   const dGross = formatDelta(kpis.totalGross.delta, true);
@@ -79,4 +79,5 @@ export const KPIGrid = ({ kpis, showGrowth = true }) => {
       </div>
     </div>
   );
-};
+});
+import { memo } from 'react';

@@ -15,6 +15,8 @@ import './App.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+const EMPTY_ARRAY = [];
+
 const IndiaMovieDashboard = lazy(() =>
   import('./components/IndiaMovieDashboard').then(({ IndiaMovieDashboard: Dashboard }) => ({
     default: Dashboard
@@ -101,10 +103,12 @@ const prettifySlug = (value) =>
 
 const sessionMovieCache = new Map();
 const sessionDateCache = new Map();
+const sessionProcessedMovieCache = new Map();
 
 window.addEventListener('pagehide', () => {
   sessionMovieCache.clear();
   sessionDateCache.clear();
+  sessionProcessedMovieCache.clear();
 });
 
 const getShallowPath = (path) => {
@@ -147,6 +151,12 @@ const getMovieLifecycleStatus = (dateKeys, today) => {
   if (sortedDates[0] > today) return 'coming_soon';
   if (sortedDates[sortedDates.length - 1] < today) return 'ended';
   return 'now_playing';
+};
+
+const getDefaultMovieShelf = (movieList) => {
+  if (movieList.some((movie) => movie.lifecycleStatus === 'now_playing')) return 'now_playing';
+  if (movieList.some((movie) => movie.lifecycleStatus === 'coming_soon')) return 'coming_soon';
+  return 'ended';
 };
 
 const getMovieShowDates = (movieIndex) =>
@@ -298,6 +308,14 @@ function App() {
       return;
     }
 
+    const cachedMovies = sessionProcessedMovieCache.get(selectedRegion);
+    if (cachedMovies) {
+      setMovies(cachedMovies);
+      setMovieShelf(getDefaultMovieShelf(cachedMovies));
+      setMovieLoading(false);
+      return undefined;
+    }
+
     const roots = getMovieRootCandidates(selectedRegion);
     let active = true;
 
@@ -341,12 +359,9 @@ function App() {
           return latestDateComparison || a.name.localeCompare(b.name);
         });
 
-        const comingSoonMovies = moviesWithLatestDates.filter((movie) => movie.lifecycleStatus === 'coming_soon');
-        const nowPlayingMovies = moviesWithLatestDates.filter((movie) => movie.lifecycleStatus === 'now_playing');
+        sessionProcessedMovieCache.set(selectedRegion, moviesWithLatestDates);
         setMovies(moviesWithLatestDates);
-        if (!nowPlayingMovies.length) {
-          setMovieShelf(comingSoonMovies.length ? 'coming_soon' : 'ended');
-        }
+        setMovieShelf(getDefaultMovieShelf(moviesWithLatestDates));
         setMovieError(null);
         setSelectedMovie((prev) => (prev && movieList.some((movie) => movie.id === prev.id) ? prev : null));
         if (!movieList.length) {
@@ -445,10 +460,10 @@ function App() {
 
   const shouldFetchDashboard = Boolean(selectedRegion && selectedMovie && selectedDate);
   const selectedModeDates = datesBySalesMode[salesView] || [];
-  const salesModeOptions = [
+  const salesModeOptions = useMemo(() => [
     { value: 'total', label: 'Current sales', mobileLabel: 'Current Sales', disabled: datesBySalesMode.total.length === 0 },
     { value: 'advance', label: 'Advance sales', mobileLabel: 'Advance Sales', disabled: datesBySalesMode.advance.length === 0 }
-  ];
+  ], [datesBySalesMode.advance.length, datesBySalesMode.total.length]);
   const comingSoonMovies = movies.filter((movie) => movie.lifecycleStatus === 'coming_soon');
   const currentMovies = movies.filter((movie) => movie.lifecycleStatus === 'now_playing');
   const oldMovies = movies.filter((movie) => movie.lifecycleStatus === 'ended');
@@ -503,7 +518,7 @@ function App() {
   const growthAvailable = selectedRegion === 'india'
     ? salesGrowthEnabled
     : salesGrowthEnabled && metadata?.growthEnabled !== false;
-  const dashboardHistoryData = growthAvailable ? historyData : [];
+  const dashboardHistoryData = growthAvailable ? historyData || EMPTY_ARRAY : EMPTY_ARRAY;
 
   const dashboardIsCurrent = selectedRegion === 'india'
     ? indiaDashboardData.movieName === selectedMovieId
@@ -579,7 +594,7 @@ function App() {
     };
   }, [lastLiveUpdate, selectedRegion]);
 
-  const allRows = useMemo(() => rawRows || [], [rawRows]);
+  const allRows = rawRows || EMPTY_ARRAY;
 
   const filteredRows = useMemo(() => {
     return allRows.filter((r) => {
@@ -599,7 +614,14 @@ function App() {
     });
   }, [allRows, filters]);
 
+  const noFiltersSelected = Object.entries(filters).every(([key, value]) => {
+    if (key === 'timeStart' || key === 'timeEnd') return value === '';
+    return Array.isArray(value) ? value.length === 0 : value === 'ALL';
+  });
+
   const filteredSummary = useMemo(() => {
+    if (noFiltersSelected) return null;
+
     const summary = {
       formats: {},
       languages: {},
@@ -721,12 +743,7 @@ function App() {
         timeCats: buildList(summary.timeCats)
       }
     };
-  }, [filteredRows]);
-
-  const noFiltersSelected = Object.entries(filters).every(([key, value]) => {
-    if (key === 'timeStart' || key === 'timeEnd') return value === '';
-    return Array.isArray(value) ? value.length === 0 : value === 'ALL';
-  });
+  }, [filteredRows, noFiltersSelected]);
   const displayedKpis = noFiltersSelected ? kpis : filteredSummary.kpis;
   const displayedTables = noFiltersSelected ? tables : filteredSummary.tables;
 
@@ -756,14 +773,14 @@ function App() {
   const handleSelectRegion = (key) => {
     window.scrollTo(0, 0);
     document.documentElement.classList.add('is-route-loading');
-    sessionMovieCache.delete(key);
-    for (const cacheKey of sessionDateCache.keys()) {
-      if (cacheKey.startsWith(`${key}/`)) sessionDateCache.delete(cacheKey);
-    }
+    const isSameRegion = selectedRegion === key;
+    const cachedMovies = sessionProcessedMovieCache.get(key);
     setHomeTransitionLoading(false);
     setSelectedRegion(key);
-    setMovies([]);
-    setMovieShelf('now_playing');
+    if (!isSameRegion) {
+      setMovies(cachedMovies || []);
+      setMovieShelf('now_playing');
+    }
     setMovieSearch('');
     setMovieError(null);
     setSelectedMovie(null);
@@ -771,7 +788,7 @@ function App() {
     setDatesBySalesMode({ total: [], advance: [] });
     setDateError(null);
     setSelectedDate(null);
-    setMovieLoading(true);
+    setMovieLoading(!isSameRegion && !cachedMovies);
     setDateLoading(false);
     navigate(`/${key}`);
   };
@@ -799,7 +816,7 @@ function App() {
     }
   }, [navigate, routeDate, selectedDateValue, selectedMovieId, selectedRegion]);
 
-  const handleSalesViewChange = (nextSalesView) => {
+  const handleSalesViewChange = useCallback((nextSalesView) => {
     if (nextSalesView === salesView) return;
 
     const nextDates = datesBySalesMode[nextSalesView] || [];
@@ -814,7 +831,17 @@ function App() {
         getMarketToday(selectedRegion)
       );
     if (nextDate !== selectedDateValue) handleDateChange(nextDate);
-  };
+  }, [datesBySalesMode, handleDateChange, salesView, selectedDateValue, selectedMovieId, selectedRegion]);
+
+  const handleChangeMovie = useCallback(() => {
+    setSelectedDate(null);
+    setSelectedMovie(null);
+    navigate(`/${selectedRegion}`);
+  }, [navigate, selectedRegion]);
+
+  const handleIndiaReload = useCallback(() => {
+    setIndiaRefreshKey((value) => value + 1);
+  }, []);
 
   const siteHeader = (
     <SiteHeader
@@ -861,12 +888,8 @@ function App() {
                 : indiaDashboardData.lastUpdated || 'N/A'}
               growthSince={salesGrowthEnabled ? indiaDashboardData.growthSince || 'N/A' : 'N/A'}
               moviePosterUrl={indiaDashboardData.posterUrl}
-              onChangeMovie={() => {
-                setSelectedDate(null);
-                setSelectedMovie(null);
-                navigate(`/${selectedRegion}`);
-              }}
-              onReload={() => setIndiaRefreshKey((value) => value + 1)}
+              onChangeMovie={handleChangeMovie}
+              onReload={handleIndiaReload}
             />
           </Suspense>
         </>
@@ -1152,7 +1175,6 @@ function App() {
                       onClick={() => {
                         if (!movie.latestDate) return;
                         window.scrollTo(0, 0);
-                        sessionDateCache.delete(`${selectedRegion}/${movie.id}`);
                         setDateLoading(true);
                         setDateError(null);
                         setDates([]);

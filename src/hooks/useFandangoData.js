@@ -598,14 +598,14 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       }
     });
 
-    const differences = {
+    const differences = includeDifferences ? {
       addedShows: [],
       removedShows: [],
       ticketsBooked: [],
       ticketsCancelled: []
-    };
+    } : null;
 
-    rawCurrent.forEach((r, idx) => {
+    if (differences) rawCurrent.forEach((r, idx) => {
       if (r.is_extra || r.t_id === 'EXTRA') return;
       const sRow = currentMatchedSnap.get(idx);
       const currBooked = normalizeNumber(r.booked);
@@ -628,7 +628,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       }
     });
 
-    rawSnapshot.forEach(r => {
+    if (differences) rawSnapshot.forEach(r => {
       if (r.is_extra || r.t_id === 'EXTRA') return;
       if (!r._matched) {
         const theaterName = r.theater || r['Theater Name'] || r['Theater'];
@@ -636,10 +636,12 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       }
     });
 
-    differences.addedShows.sort((a, b) => normalizeNumber(b.gross) - normalizeNumber(a.gross));
-    differences.removedShows.sort((a, b) => normalizeNumber(b.gross || b['Gross ($)'] || b['Gross']) - normalizeNumber(a.gross || a['Gross ($)'] || a['Gross']));
-    differences.ticketsBooked.sort((a, b) => b.diffBooked - a.diffBooked);
-    differences.ticketsCancelled.sort((a, b) => b.diffBooked - a.diffBooked);
+    if (differences) {
+      differences.addedShows.sort((a, b) => normalizeNumber(b.gross) - normalizeNumber(a.gross));
+      differences.removedShows.sort((a, b) => normalizeNumber(b.gross || b['Gross ($)'] || b['Gross']) - normalizeNumber(a.gross || a['Gross ($)'] || a['Gross']));
+      differences.ticketsBooked.sort((a, b) => b.diffBooked - a.diffBooked);
+      differences.ticketsCancelled.sort((a, b) => b.diffBooked - a.diffBooked);
+    }
 
     const aggregate = (dataset) => {
       let totalGross = 0;
@@ -915,7 +917,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}/${activeSalesMode}/timestamp-v2`, nextData);
     setData(nextData);
 
-  }, [diffMode, enabled, movieSlug, region, showDate]);
+  }, [diffMode, enabled, includeDifferences, movieSlug, region, showDate]);
 
   const processRef = useRef(process);
   useEffect(() => {
@@ -945,19 +947,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         lastLiveUpdate: null,
         posterUrl: ''
       };
-      setData({
-        loading: false,
-        kpis: null,
-        tables: null,
-        rawRows: [],
-        historyData: [],
-        hasAdvanceSnapshot: false,
-        filteredKpis: null,
-        metadata: null,
-        error: null,
-        differences: null,
-        lastLiveUpdate: null
-      });
       return undefined;
     }
 
@@ -981,17 +970,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     };
 
     const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/${salesModeRef.current}/timestamp-v2`;
-    let cachedFrameId;
-    let cachedTimerId;
     if (refreshKey > 0) sessionDashboardCache.delete(cacheKey);
-    if (sessionDashboardCache.has(cacheKey)) {
-      const cachedData = sessionDashboardCache.get(cacheKey);
-      cachedFrameId = requestAnimationFrame(() => {
-        cachedTimerId = setTimeout(() => {
-          if (requestIdRef.current === requestId) setData(cachedData);
-        }, 0);
-      });
-    }
 
     const paths = getMovieDateCandidates(region, movieSlug);
     const validPaths = paths.filter(Boolean);
@@ -1159,8 +1138,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
     return () => {
       if (requestIdRef.current === requestId) requestIdRef.current += 1;
-      cancelAnimationFrame(cachedFrameId);
-      clearTimeout(cachedTimerId);
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
   // Keep live listeners stable; the processor ref tracks diff-mode changes without resubscribing.
@@ -1172,11 +1149,15 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     process();
   }, [diffMode, enabled, process, refreshKey, salesMode]);
 
+  const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/${salesMode}/timestamp-v2`;
+  const cachedData = sessionDashboardCache.get(cacheKey);
+  const displayData = cachedData || data;
+
   return {
-    ...data,
+    ...displayData,
     region,
     movieSlug,
     showDate,
-    includeDifferences: includeDifferences && data.metadata?.growthEnabled === true
+    includeDifferences: includeDifferences && displayData.metadata?.growthEnabled === true
   };
 };

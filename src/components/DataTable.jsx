@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 const formatCurrency = (val) => {
   return `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -21,7 +21,7 @@ const getOccupancyColor = (occ) => {
 
 const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
-export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheater, showGrowth = true }) => {
+export const DataTable = memo(({ title, data, isFormat, isLanguage, isState, isTheater, showGrowth = true }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 20;
 
@@ -111,4 +111,4 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
       </div>
     </div>
   );
-};
+});

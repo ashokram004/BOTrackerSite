@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import { TimeFilter } from './TimeFilter';
 import { MultiSelectFilter } from './MultiSelectFilter';
 
-export const FilterPanel = ({
+export const FilterPanel = memo(({
   rawRows,
   filters,
   setFilters,
@@ -101,4 +101,4 @@ export const FilterPanel = ({
       </div>
     </div>
   );
-};
+});
