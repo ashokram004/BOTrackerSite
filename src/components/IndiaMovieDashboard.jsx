@@ -165,7 +165,8 @@ export const IndiaMovieDashboard = ({
   onChangeMovie,
   onReload,
   lastUpdated = 'N/A',
-  growthSince = 'N/A'
+  growthSince = 'N/A',
+  growthEnabled = true
 }) => {
   const [filters, setFilters] = useState({
     platform: [],
@@ -185,7 +186,7 @@ export const IndiaMovieDashboard = ({
   const [showFilters, setShowFilters] = useState(false);
   const [showGrowth, setShowGrowth] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const hasGrowthData = historyData.filter(
+  const hasGrowthData = growthEnabled && historyData.filter(
     (snapshot) => snapshot && typeof snapshot === 'object'
   ).length > 1;
 
@@ -953,7 +954,7 @@ export const IndiaMovieDashboard = ({
               label: 'Growth',
               ariaLabel: showGrowth ? 'Hide growth details' : 'Show growth details',
               onClick: () => setShowGrowth((value) => !value),
-              disabled: !hasGrowthData,
+              disabled: !hasGrowthData || !growthEnabled,
               variant: 'secondary',
               isActive: showGrowth,
               neutralHoverWhenInactive: true,

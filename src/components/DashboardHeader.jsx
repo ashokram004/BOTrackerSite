@@ -1,4 +1,34 @@
+import { memo } from 'react';
+
 export const DEFAULT_MOVIE_POSTER_URL = 'https://drive.google.com/thumbnail?id=15N4n9XlpRgxsAui3T7SQd02yZUMSmSLD&sz=w1000';
+
+const ReportDateSelect = memo(({ showDate, dateOptions, onDateChange, salesMode }) => (
+  <div className="dashboard-date-action">
+    <label className="dashboard-date-control">
+      <span className="dashboard-header-label">
+        <span className="dashboard-date-label-full">SHOW DATE</span>
+        <span className="dashboard-date-label-mobile">SHOW DATE</span>
+      </span>
+      <span className="dashboard-date-select-wrap">
+        <select
+          value={showDate}
+          onChange={(event) => {
+            if (event.target.value !== showDate) onDateChange?.(event.target.value);
+          }}
+          aria-label={`Select ${salesMode === 'advance' ? 'advance' : 'total sales'} report date`}
+        >
+          {dateOptions.length > 0
+            ? dateOptions.map((date) => (
+              <option key={date} value={date}>
+                {date}
+              </option>
+            ))
+            : <option value={showDate}>{showDate}</option>}
+        </select>
+      </span>
+    </label>
+  </div>
+));
 
 const DashboardActionIcon = ({ name }) => {
   const icons = {
@@ -220,29 +250,12 @@ export const DashboardHeader = ({
 
       <div className="dashboard-header-actions">
         {showDate && (
-          <div className="dashboard-date-action">
-            <label className="dashboard-date-control">
-              <span className="dashboard-header-label">
-                <span className="dashboard-date-label-full">SHOW DATE</span>
-                <span className="dashboard-date-label-mobile">SHOW DATE</span>
-              </span>
-              <span className="dashboard-date-select-wrap">
-                <select
-                  value={showDate}
-                  onChange={(event) => onDateChange?.(event.target.value)}
-                  aria-label={`Select ${salesMode === 'advance' ? 'advance' : 'total sales'} report date`}
-                >
-                  {dateOptions.length > 0
-                    ? dateOptions.map((date) => (
-                      <option key={date} value={date}>
-                        {date}
-                      </option>
-                    ))
-                    : <option value={showDate}>{showDate}</option>}
-                </select>
-              </span>
-            </label>
-          </div>
+          <ReportDateSelect
+            showDate={showDate}
+            dateOptions={dateOptions}
+            onDateChange={onDateChange}
+            salesMode={salesMode}
+          />
         )}
         <div className={`dashboard-header-right-actions ${rightActionsClassName}`}>
           {renderActions(rightActions)}

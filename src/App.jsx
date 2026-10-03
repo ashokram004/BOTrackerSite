@@ -7,17 +7,24 @@ import { HistoryTable } from './components/HistoryTable';
 import { FilterPanel } from './components/FilterPanel';
 import { CUSTOM_TIME_RANGE, isTimeInRange } from './utils/timeFilter';
 import { DifferenceTable } from './components/DifferenceTable';
-import { generateImageReport } from './utils/imageGenerator';
-import { PacingChart } from './components/PacingChart';
-import { IndiaMovieDashboard } from './components/IndiaMovieDashboard';
 import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './components/DashboardHeader';
 import { LoadingState } from './components/LoadingState';
 import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
 import './App.css';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { INDIA_OLD, US_OLD } from './movieGroups';
+
+const IndiaMovieDashboard = lazy(() =>
+  import('./components/IndiaMovieDashboard').then(({ IndiaMovieDashboard: Dashboard }) => ({
+    default: Dashboard
+  }))
+);
+const PacingChart = lazy(() =>
+  import('./components/PacingChart').then(({ PacingChart: Chart }) => ({
+    default: Chart
+  }))
+);
 
 const REGION_META = {
   india: {
@@ -122,56 +129,77 @@ const loadShallowKeys = async (path) => {
 
 const hasKeys = (value) => value && typeof value === 'object' && Object.keys(value).length > 0;
 
-const getLatestDateKey = (value) => {
-  if (!value || typeof value !== 'object') return null;
-
-  const dateKeys = Object.keys(value).filter(
-    (key) => /^\d{4}-\d{2}-\d{2}$/.test(key) && value[key] !== null && value[key] !== undefined
-  );
-
-  return dateKeys.sort().at(-1) || null;
+const getMarketToday = (region) => {
+  const timeZone = region === 'india' ? 'Asia/Kolkata' : 'America/New_York';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
 };
 
-const hasReportData = (value) => {
-  if (!value || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return value.length > 0;
-  return Object.keys(value).length > 0;
+const getMovieLifecycleStatus = (dateKeys, today) => {
+  const sortedDates = [...dateKeys].sort();
+  if (!sortedDates.length) return 'ended';
+  if (sortedDates[0] > today) return 'coming_soon';
+  if (sortedDates[sortedDates.length - 1] < today) return 'ended';
+  return 'now_playing';
 };
 
-const hasAdvanceReportData = (value) => {
-  if (!value || typeof value !== 'object') return false;
-  const rows = value.data ?? value;
-  if (Array.isArray(rows)) return rows.length > 0;
-  if (typeof rows !== 'object') return false;
-  return Object.values(rows).some((row) => row && typeof row === 'object');
+const getMovieShowDates = (movieIndex) =>
+  Object.keys(movieIndex || {})
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date) && movieIndex[date] !== null)
+    .sort((a, b) => b.localeCompare(a));
+
+const getDatesBySalesMode = (showDates, today) => ({
+  total: showDates.filter((date) => date <= today),
+  advance: showDates
+});
+
+const getDefaultDateForSalesMode = (dates, salesMode, today) => {
+  const sortedDates = [...dates].sort((a, b) => a.localeCompare(b));
+  if (salesMode === 'total') {
+    return sortedDates.filter((date) => date <= today).at(-1) || null;
+  }
+
+  const tomorrow = new Date(`${today}T00:00:00Z`);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  const tomorrowKey = tomorrow.toISOString().slice(0, 10);
+  return sortedDates.find((date) => date === tomorrowKey)
+    || sortedDates.find((date) => date > today)
+    || sortedDates.at(-1)
+    || null;
 };
 
-const getDatesBySalesMode = (raw, dateKeys) => {
-  const total = [];
-  const advance = [];
+const getMovieShowDatesForMovie = async (region, movieId) => {
+  const cacheKey = `${region}/${movieId}`;
+  const cachedDates = sessionDateCache.get(cacheKey);
+  if (cachedDates) return cachedDates;
 
-  dateKeys.forEach((date) => {
-    const report = raw?.[date];
-    if (!report || typeof report !== 'object') return;
+  const dateLoad = (async () => {
+    const [movieRoot] = getMovieDatePathCandidates(region, movieId);
+    const shallowPath = getShallowPath(movieRoot);
+    if (!shallowPath) throw new Error('Firebase database URL is not configured.');
 
-    if (
-      hasReportData(report.master_shows_data) ||
-      hasReportData(report.last_snapshot) ||
-      hasReportData(report.previous_run_snapshot) ||
-      hasReportData(report.data)
-    ) {
-      total.push(date);
+    const response = await fetch(shallowPath);
+    if (response.status === 404) return [];
+    if (!response.ok) {
+      throw new Error(`Unable to load show dates (${response.status}): ${movieRoot}`);
     }
 
-    if (hasAdvanceReportData(report.advance_snapshot)) {
-      advance.push(date);
-    }
-  });
+    return getMovieShowDates(await response.json());
+  })();
+  sessionDateCache.set(cacheKey, dateLoad);
 
-  return {
-    total: total.length || advance.length ? total : dateKeys,
-    advance
-  };
+  try {
+    return await dateLoad;
+  } catch (error) {
+    if (sessionDateCache.get(cacheKey) === dateLoad) sessionDateCache.delete(cacheKey);
+    throw error;
+  }
 };
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -224,10 +252,13 @@ function App() {
   const selectedMovieId = selectedMovie?.id || '';
   const selectedDateValue = selectedDate || '';
   const salesView = salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'total';
+  const isHistoricalAdvance = salesView === 'advance'
+    && Boolean(selectedDateValue)
+    && selectedDateValue <= getMarketToday(selectedRegion || 'usa');
+  const salesGrowthEnabled = !isHistoricalAdvance;
   const [indiaRefreshKey, setIndiaRefreshKey] = useState(0);
   const [reloadKey, setReloadKey] = useState(0);
   const [homeTransitionLoading, setHomeTransitionLoading] = useState(false);
-  const [openingDashboard, setOpeningDashboard] = useState(false);
   const themeTransitionTimeoutRef = useRef(null);
 
   useEffect(() => {
@@ -248,14 +279,18 @@ function App() {
 
   useEffect(() => {
     const nextMovie = routeMovieSlug ? { id: routeMovieSlug, name: prettifySlug(routeMovieSlug) } : null;
-    const timerId = setTimeout(() => {
-      setSelectedRegion(normalizedRegion);
-      setSelectedMovie(nextMovie);
-      setSelectedDate(routeDate || null);
-      setMovieError(null);
-      setDateError(null);
-    }, 0);
-    return () => clearTimeout(timerId);
+    setSelectedRegion((previous) => previous === normalizedRegion ? previous : normalizedRegion);
+    setSelectedMovie((previous) =>
+      previous?.id === nextMovie?.id
+        ? previous
+        : nextMovie
+    );
+    setSelectedDate((previous) => {
+      const nextDate = routeDate || null;
+      return previous === nextDate ? previous : nextDate;
+    });
+    setMovieError(null);
+    setDateError(null);
   }, [normalizedRegion, routeDate, routeMovieSlug]);
 
   useEffect(() => {
@@ -278,31 +313,28 @@ function App() {
         }
         if (!active) return;
 
-        const oldMovieIds = new Set(
-          (selectedRegion === 'india' ? INDIA_OLD : US_OLD)
-            .map((id) => String(id).trim().toLowerCase())
-        );
         const movieList = Object.entries(raw)
           .filter(([, value]) => value !== null && value !== undefined)
           .map(([id, value]) => ({
             id,
             name: value && typeof value === 'object' && value.name ? value.name : prettifySlug(id),
-            lifecycleStatus: ['coming_soon', 'now_playing', 'ended'].includes(value?.lifecycleStatus)
-              ? value.lifecycleStatus
-              : oldMovieIds.has(id.toLowerCase()) ? 'ended' : 'now_playing',
             releaseDate: /^\d{4}-\d{2}-\d{2}$/.test(value?.releaseDate || '') ? value.releaseDate : null,
             raw: value
           }));
 
-        const moviesWithLatestDates = await Promise.all(
-          movieList.map(async (movie) => {
-            const shallowMovie = await loadShallowKeys(`${roots[0]}/${movie.id}`);
-            return {
-              ...movie,
-              latestDate: getLatestDateKey(shallowMovie) || getLatestDateKey(movie.raw)
-            };
-          })
+        const today = getMarketToday(selectedRegion);
+        const movieDateIndexes = await Promise.all(
+          movieList.map((movie) => getMovieShowDatesForMovie(selectedRegion, movie.id))
         );
+        const moviesWithLatestDates = movieList.map((movie, index) => {
+          const movieDates = movieDateIndexes[index];
+          return {
+            ...movie,
+            lifecycleStatus: getMovieLifecycleStatus(movieDates, today),
+            firstDate: movieDates.at(-1) || null,
+            latestDate: movieDates[0] || null
+          };
+        });
 
         moviesWithLatestDates.sort((a, b) => {
           const latestDateComparison = String(b.latestDate || '').localeCompare(String(a.latestDate || ''));
@@ -336,52 +368,49 @@ function App() {
     return () => {
       active = false;
     };
-  }, [routeMovieSlug, selectedRegion]);
+  }, [selectedRegion]);
 
   useEffect(() => {
-    if (!selectedRegion || !selectedMovie) {
+    if (!selectedRegion || !selectedMovieId) {
       return;
     }
 
-    const roots = getMovieDatePathCandidates(selectedRegion, selectedMovie.id);
     let active = true;
 
     const loadDates = async () => {
       try {
-        const cacheKey = `${selectedRegion}/${selectedMovie.id}`;
-        let raw = sessionDateCache.get(cacheKey);
-        if (!raw) {
-          raw = await loadNodeWithRetry(roots);
-          if (raw && Object.keys(raw).length > 0) {
-            sessionDateCache.set(cacheKey, raw);
-          }
-        }
+        const showDates = await getMovieShowDatesForMovie(selectedRegion, selectedMovieId);
         if (!active) return;
 
-        const dateKeys = Object.keys(raw)
-          .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key) && raw[key] !== null && raw[key] !== undefined)
-          .sort((a, b) => b.localeCompare(a));
-
-        const modeDates = getDatesBySalesMode(raw, dateKeys);
+        const today = getMarketToday(selectedRegion);
+        const modeDates = getDatesBySalesMode(showDates, today);
+        const dateKeys = showDates;
         setDatesBySalesMode(modeDates);
         setDates(dateKeys);
         setDateError(null);
-        const isCurrentMovieRoute = routeMovieSlug === selectedMovie.id;
+        const isCurrentMovieRoute = routeMovieSlug === selectedMovieId;
         const requestedMode = salesView;
         const routeDateMode = Object.keys(modeDates).find((mode) => modeDates[mode].includes(routeDate));
-        const nextMode = isCurrentMovieRoute && modeDates[requestedMode].includes(routeDate)
-          ? requestedMode
-          : isCurrentMovieRoute && routeDateMode
-            ? routeDateMode
-            : requestedMode;
+        const otherMode = requestedMode === 'total' ? 'advance' : 'total';
+        const nextMode = isCurrentMovieRoute && routeDateMode
+          ? modeDates[requestedMode].includes(routeDate) ? requestedMode : routeDateMode
+          : modeDates[requestedMode].length
+            ? requestedMode
+            : modeDates[otherMode].length
+              ? otherMode
+              : requestedMode;
         const modeDateKeys = modeDates[nextMode];
         const nextDate = isCurrentMovieRoute && modeDateKeys.includes(routeDate)
           ? routeDate
-          : modeDateKeys[0] || null;
-        setSalesModeState({ movieId: selectedMovie.id, mode: nextMode });
+          : getDefaultDateForSalesMode(modeDateKeys, nextMode, today);
+        setSalesModeState((previous) =>
+          previous.movieId === selectedMovieId && previous.mode === nextMode
+            ? previous
+            : { movieId: selectedMovieId, mode: nextMode }
+        );
         setSelectedDate(nextDate);
         if (nextDate && routeDate !== nextDate) {
-          navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovie.id)}/${encodeURIComponent(nextDate)}`);
+          navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}/${encodeURIComponent(nextDate)}`);
         }
       } catch (error) {
         if (!active) return;
@@ -397,7 +426,22 @@ function App() {
     return () => {
       active = false;
     };
-  }, [navigate, routeDate, routeMovieSlug, salesView, selectedMovie, selectedRegion]);
+  }, [navigate, selectedMovieId, selectedRegion]);
+
+  useEffect(() => {
+    if (!selectedMovieId || !routeDate) return;
+
+    const routeDateMode = Object.keys(datesBySalesMode).find((mode) =>
+      datesBySalesMode[mode].includes(routeDate)
+    );
+    if (!routeDateMode || datesBySalesMode[salesView].includes(routeDate)) return;
+
+    setSalesModeState((previous) =>
+      previous.movieId === selectedMovieId && previous.mode === routeDateMode
+        ? previous
+        : { movieId: selectedMovieId, mode: routeDateMode }
+    );
+  }, [datesBySalesMode, routeDate, salesView, selectedMovieId]);
 
   const shouldFetchDashboard = Boolean(selectedRegion && selectedMovie && selectedDate);
   const selectedModeDates = datesBySalesMode[salesView] || [];
@@ -416,7 +460,7 @@ function App() {
   }[activeMovieShelf];
   const orderedDisplayedMovies = [...displayedMovies].sort((a, b) => {
     if (activeMovieShelf === 'coming_soon') {
-      return String(a.releaseDate || '9999-12-31').localeCompare(String(b.releaseDate || '9999-12-31'))
+      return String(a.firstDate || '9999-12-31').localeCompare(String(b.firstDate || '9999-12-31'))
         || a.name.localeCompare(b.name);
     }
     return String(b.latestDate || '').localeCompare(String(a.latestDate || ''))
@@ -432,7 +476,7 @@ function App() {
     region: selectedRegion || 'usa',
     movieSlug: selectedMovieId,
     showDate: selectedDateValue,
-    includeDifferences: selectedRegion === 'usa' && showUsGrowth,
+    includeDifferences: selectedRegion === 'usa' && showUsGrowth && salesGrowthEnabled,
     enabled: shouldFetchDashboard && selectedRegion !== 'india',
     refreshKey: reloadKey
   });
@@ -456,11 +500,25 @@ function App() {
     includeDifferences,
     lastLiveUpdate
   } = selectedRegion === 'india' ? { loading: indiaDashboardData.loading, kpis: null, tables: null, metadata: { showDate: indiaDashboardData.showDate }, error: indiaDashboardData.error, rawRows: indiaDashboardData.rows, historyData: [], differences: null, includeDifferences: false } : dashboardData;
+  const growthAvailable = selectedRegion === 'india'
+    ? salesGrowthEnabled
+    : salesGrowthEnabled && metadata?.growthEnabled !== false;
+  const dashboardHistoryData = growthAvailable ? historyData : [];
 
   const dashboardIsCurrent = selectedRegion === 'india'
-    ? indiaDashboardData.movieName === selectedMovieId && indiaDashboardData.showDate === selectedDateValue
+    ? indiaDashboardData.movieName === selectedMovieId
+      && indiaDashboardData.showDate === selectedDateValue
+      && (!isHistoricalAdvance || (
+        indiaDashboardData.currentSnapshotReady
+        && indiaDashboardData.advanceSnapshotReady
+      ))
     : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue && metadata?.salesMode === salesView;
   const dashboardLoading = loading || !dashboardIsCurrent;
+  const openingDashboard = Boolean(
+    selectedRegion &&
+    selectedMovie &&
+    (dateLoading || (shouldFetchDashboard && dashboardLoading))
+  );
   const routeContentLoading = movieLoading || dateLoading || openingDashboard || (shouldFetchDashboard && dashboardLoading);
 
   const [isGeneratingImg, setIsGeneratingImg] = useState(false);
@@ -488,30 +546,6 @@ function App() {
     const timeoutId = window.setTimeout(() => setHomeTransitionLoading(false), 520);
     return () => window.clearTimeout(timeoutId);
   }, [homeTransitionLoading]);
-
-  useEffect(() => {
-    if (!openingDashboard) return;
-
-    if (
-      !selectedRegion ||
-      !selectedMovie ||
-      (shouldFetchDashboard && !dashboardLoading) ||
-      dateError ||
-      (!dateLoading && !selectedDate && dates.length === 0)
-    ) {
-      setOpeningDashboard(false);
-    }
-  }, [
-    dashboardLoading,
-    dateError,
-    dateLoading,
-    dates.length,
-    openingDashboard,
-    selectedDate,
-    selectedMovie,
-    selectedRegion,
-    shouldFetchDashboard
-  ]);
 
   useEffect(() => () => {
     document.documentElement.classList.remove('is-route-loading');
@@ -700,6 +734,7 @@ function App() {
     if (isGeneratingImg) return;
     setIsGeneratingImg(true);
     try {
+      const { generateImageReport } = await import('./utils/imageGenerator');
       const dataUrl = await generateImageReport(kpis, tables, metadata, selectedMovie?.name);
       const a = document.createElement('a');
       a.href = dataUrl;
@@ -721,8 +756,11 @@ function App() {
   const handleSelectRegion = (key) => {
     window.scrollTo(0, 0);
     document.documentElement.classList.add('is-route-loading');
+    sessionMovieCache.delete(key);
+    for (const cacheKey of sessionDateCache.keys()) {
+      if (cacheKey.startsWith(`${key}/`)) sessionDateCache.delete(cacheKey);
+    }
     setHomeTransitionLoading(false);
-    setOpeningDashboard(false);
     setSelectedRegion(key);
     setMovies([]);
     setMovieShelf('now_playing');
@@ -741,7 +779,6 @@ function App() {
   const handleHome = () => {
     window.scrollTo(0, 0);
     setHomeTransitionLoading(Boolean(selectedRegion));
-    setOpeningDashboard(false);
     setSelectedDate(null);
     setSelectedMovie(null);
     setSelectedRegion(null);
@@ -749,17 +786,33 @@ function App() {
     navigate('/');
   };
 
-  const handleDateChange = (date) => {
-    setSelectedDate(date);
-    navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}/${encodeURIComponent(date)}`);
-  };
+  const handleDateChange = useCallback((date) => {
+    if (!date || !selectedRegion || !selectedMovieId) return;
+
+    const dateChanged = date !== selectedDateValue;
+    const routeChanged = date !== routeDate;
+    if (!dateChanged && !routeChanged) return;
+
+    if (dateChanged) setSelectedDate(date);
+    if (routeChanged) {
+      navigate(`/${selectedRegion}/${encodeURIComponent(selectedMovieId)}/${encodeURIComponent(date)}`);
+    }
+  }, [navigate, routeDate, selectedDateValue, selectedMovieId, selectedRegion]);
 
   const handleSalesViewChange = (nextSalesView) => {
+    if (nextSalesView === salesView) return;
+
     const nextDates = datesBySalesMode[nextSalesView] || [];
     if (!nextDates.length) return;
 
     setSalesModeState({ movieId: selectedMovieId, mode: nextSalesView });
-    const nextDate = nextDates.includes(selectedDateValue) ? selectedDateValue : nextDates[0];
+    const nextDate = nextDates.includes(selectedDateValue)
+      ? selectedDateValue
+      : getDefaultDateForSalesMode(
+        nextDates,
+        nextSalesView,
+        getMarketToday(selectedRegion)
+      );
     if (nextDate !== selectedDateValue) handleDateChange(nextDate);
   };
 
@@ -789,28 +842,33 @@ function App() {
       return (
         <>
           {siteHeader}
-          <IndiaMovieDashboard
-          rows={salesView === 'advance' && indiaDashboardData.hasAdvanceSnapshot
-            ? indiaDashboardData.advanceRows || []
-            : indiaDashboardData.rows || []}
-          historyData={indiaDashboardData.historyData || []}
-          salesView={salesView}
-          movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
-          showDate={selectedDateValue}
-          dates={selectedModeDates}
-          salesModeOptions={salesModeOptions}
-          onSalesViewChange={handleSalesViewChange}
-          onDateChange={handleDateChange}
-          lastUpdated={indiaDashboardData.lastUpdated || 'N/A'}
-          growthSince={indiaDashboardData.growthSince || 'N/A'}
-          moviePosterUrl={indiaDashboardData.posterUrl}
-          onChangeMovie={() => {
-            setSelectedDate(null);
-            setSelectedMovie(null);
-            navigate(`/${selectedRegion}`);
-          }}
-          onReload={() => setIndiaRefreshKey((value) => value + 1)}
-          />
+          <Suspense fallback={<main className="site-main dashboard-loading"><LoadingState label="Loading India dashboard" /></main>}>
+            <IndiaMovieDashboard
+              rows={isHistoricalAdvance && indiaDashboardData.hasAdvanceSnapshot
+                ? indiaDashboardData.advanceRows || []
+                : indiaDashboardData.rows || []}
+              historyData={salesGrowthEnabled ? indiaDashboardData.historyData || [] : []}
+              growthEnabled={salesGrowthEnabled}
+              salesView={salesView}
+              movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
+              showDate={selectedDateValue}
+              dates={selectedModeDates}
+              salesModeOptions={salesModeOptions}
+              onSalesViewChange={handleSalesViewChange}
+              onDateChange={handleDateChange}
+              lastUpdated={isHistoricalAdvance && indiaDashboardData.hasAdvanceSnapshot
+                ? indiaDashboardData.advanceLastUpdated || indiaDashboardData.lastUpdated || 'N/A'
+                : indiaDashboardData.lastUpdated || 'N/A'}
+              growthSince={salesGrowthEnabled ? indiaDashboardData.growthSince || 'N/A' : 'N/A'}
+              moviePosterUrl={indiaDashboardData.posterUrl}
+              onChangeMovie={() => {
+                setSelectedDate(null);
+                setSelectedMovie(null);
+                navigate(`/${selectedRegion}`);
+              }}
+              onReload={() => setIndiaRefreshKey((value) => value + 1)}
+            />
+          </Suspense>
         </>
       );
     }
@@ -843,13 +901,15 @@ function App() {
           <DashboardHeader
             marketLabel={`${REGION_META[selectedRegion]?.label} BOX OFFICE`}
             movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
-            showDate={metadata?.showDate || selectedDateValue}
+            showDate={selectedDateValue}
             dateOptions={selectedModeDates}
             onDateChange={handleDateChange}
             salesMode={salesView}
             salesModeOptions={salesModeOptions}
             onSalesModeChange={handleSalesViewChange}
-            lastUpdated={metadata ? `${metadata.lastUpdated} IST${metadata.growthSince ? ` • Growth since ${metadata.growthSince} IST` : ''}` : 'N/A'}
+            lastUpdated={metadata
+              ? `${metadata.lastUpdated} IST${metadata.growthEnabled && metadata.growthSince && metadata.growthSince !== 'N/A' ? ` • Growth since ${metadata.growthSince} IST` : ''}`
+              : 'N/A'}
             moviePosterUrl={metadata?.posterUrl || DEFAULT_MOVIE_POSTER_URL}
             rightActionsClassName="usa-dashboard-right-actions"
             leftActions={[
@@ -862,7 +922,7 @@ function App() {
             ]}
             rightActions={[
               { label: showFilters ? 'Hide Filters' : 'Show Filters', onClick: () => setShowFilters((v) => !v), variant: 'secondary', isActive: showFilters, mobileLabel: 'Filters', mobileIcon: 'filter' },
-              { label: 'Growth', ariaLabel: showUsGrowth ? 'Hide growth details' : 'Show growth details', onClick: () => setShowUsGrowth((value) => !value), variant: 'secondary', isActive: showUsGrowth, neutralHoverWhenInactive: true, activeStyle: 'dashboard-action-btn--growth-active', mobileLabel: 'Growth', mobileIcon: 'growth' },
+              { label: 'Growth', ariaLabel: showUsGrowth ? 'Hide growth details' : 'Show growth details', onClick: () => setShowUsGrowth((value) => !value), variant: 'secondary', disabled: !growthAvailable, isActive: showUsGrowth && growthAvailable, neutralHoverWhenInactive: true, activeStyle: 'dashboard-action-btn--growth-active', mobileLabel: 'Growth', mobileIcon: 'growth' },
               { label: isGeneratingImg ? 'Generating...' : 'Export Image', onClick: handleExportImage, variant: 'primary', disabled: isGeneratingImg, mobileLabel: isGeneratingImg ? 'Wait' : 'Export', mobileIcon: 'export' }
             ]}
           />
@@ -878,28 +938,28 @@ function App() {
             />
           )}
 
-          <KPIGrid kpis={displayedKpis} showGrowth={showUsGrowth} />
+          <KPIGrid kpis={displayedKpis} showGrowth={showUsGrowth && growthAvailable} />
 
           <div className="dashboard-row">
-            {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat showGrowth={showUsGrowth} />}
-            {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage showGrowth={showUsGrowth} />}
+            {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat showGrowth={showUsGrowth && growthAvailable} />}
+            {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage showGrowth={showUsGrowth && growthAvailable} />}
           </div>
 
           <div className="dashboard-row">
-            {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState showGrowth={showUsGrowth} />}
-            {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater showGrowth={showUsGrowth} />}
+            {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState showGrowth={showUsGrowth && growthAvailable} />}
+            {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater showGrowth={showUsGrowth && growthAvailable} />}
           </div>
 
           <div className="dashboard-row">
             <DataTable
               title="Theatre Chain Breakdown"
               data={displayedTables?.chains || []}
-              showGrowth={showUsGrowth}
+              showGrowth={showUsGrowth && growthAvailable}
             />
             <DataTable
               title="Time of Day Breakdown"
               data={displayedTables?.timeCats || []}
-              showGrowth={showUsGrowth}
+              showGrowth={showUsGrowth && growthAvailable}
             />
           </div>
 
@@ -907,15 +967,17 @@ function App() {
             <ShowsTable rows={filteredRows} />
           </div>
 
-          {historyData && historyData.length > 0 && (
+          {dashboardHistoryData && dashboardHistoryData.length > 0 && (
             <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
-              <HistoryTable data={historyData} />
+              <HistoryTable data={dashboardHistoryData} />
             </div>
           )}
 
-          {historyData && historyData.length > 0 && (
+          {dashboardHistoryData && dashboardHistoryData.length > 0 && (
             <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
-              <PacingChart historyData={historyData} />
+              <Suspense fallback={null}>
+                <PacingChart historyData={dashboardHistoryData} />
+              </Suspense>
             </div>
           )}
 
@@ -1090,7 +1152,7 @@ function App() {
                       onClick={() => {
                         if (!movie.latestDate) return;
                         window.scrollTo(0, 0);
-                        setOpeningDashboard(true);
+                        sessionDateCache.delete(`${selectedRegion}/${movie.id}`);
                         setDateLoading(true);
                         setDateError(null);
                         setDates([]);
@@ -1135,7 +1197,7 @@ function App() {
                   {movieSearch.trim()
                     ? `No titles match “${movieSearch.trim()}”. Try another search.`
                     : activeMovieShelf === 'coming_soon'
-                      ? 'No upcoming titles yet. Add a movie with lifecycleStatus set to coming_soon to feature it here.'
+                      ? 'No upcoming titles yet. Movies with future show dates will appear here automatically.'
                       : activeMovieShelf === 'ended'
                         ? 'No archived titles found for this market.'
                         : 'No now-playing titles found for this market.'}
@@ -1166,15 +1228,21 @@ function App() {
               <p>Opening the latest available box-office report.</p>
             </div>
           </section>
-          {dateLoading || dates.length === 0 ? (
+          {dateLoading || movieLoading || (!dateError && selectedModeDates.length > 0) ? (
             <div className="selection-state">
               {dateError
                 ? <span className="selection-error" role="alert">{dateError}</span>
-                : dateLoading || movieLoading
-                  ? <LoadingState label="Loading the latest report" />
-                  : 'No show dates are available for this movie.'}
+                : <LoadingState label="Loading the latest report" />}
             </div>
-          ) : <div className="selection-state"><LoadingState label="Opening the latest report" /></div>}
+          ) : (
+            <div className="selection-state">
+              {dateError
+                ? <span className="selection-error" role="alert">{dateError}</span>
+                : dates.length === 0
+                  ? 'No show dates are available for this movie.'
+                  : `No ${salesView === 'advance' ? 'advance' : 'current sales'} report dates are available for this movie.`}
+            </div>
+          )}
         </main>
       </div>
     );
