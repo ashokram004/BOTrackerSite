@@ -8,18 +8,6 @@ const DEFAULT_SHOW_DATE = '2026-06-03';
 const DEFAULT_REGION = 'usa';
 const sessionDashboardCache = new Map();
 
-const getMarketToday = (region) => {
-  const timeZone = String(region).toLowerCase() === 'india' ? 'Asia/Kolkata' : 'America/New_York';
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).formatToParts(new Date());
-  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
-  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
-};
-
 window.addEventListener('pagehide', () => {
   sessionDashboardCache.clear();
 });
@@ -283,10 +271,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
   });
   const salesModeRef = useRef(salesMode);
   salesModeRef.current = salesMode;
-  const isHistoricalAdvanceRef = useRef(false);
-  isHistoricalAdvanceRef.current = salesMode === 'advance' && showDate <= getMarketToday(region);
-  const diffModeRef = useRef(diffMode);
-  diffModeRef.current = diffMode;
 
   const refs = useRef({
     currentData: null,
@@ -301,8 +285,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     growthSinceDaily: 'N/A',
     growthSinceHourly: 'N/A',
     receivedInitialCurrentData: false,
-    currentDataReady: false,
-    advanceSnapshotReady: false,
     lastLiveUpdate: null,
     posterUrl: ''
   });
@@ -312,21 +294,9 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     if (!enabled) return;
 
     const activeSalesMode = salesModeRef.current;
-    const isHistoricalAdvance = isHistoricalAdvanceRef.current;
-    const {
-      dailySnapshot,
-      hourlySnapshot,
-      historyDataRaw,
-      lastUpdated,
-      growthSinceDaily,
-      growthSinceHourly,
-      advanceSnapshot,
-      currentDataReady,
-      advanceSnapshotReady
-    } = refs.current;
-    if (isHistoricalAdvance && (!advanceSnapshotReady || !currentDataReady)) return;
-    const currentData = isHistoricalAdvance
-      ? advanceSnapshot || refs.current.currentData
+    const { dailySnapshot, hourlySnapshot, historyDataRaw, lastUpdated, growthSinceDaily, growthSinceHourly, advanceSnapshot } = refs.current;
+    const currentData = activeSalesMode === 'advance' && advanceSnapshot
+      ? advanceSnapshot
       : refs.current.currentData;
 
     const isIndia = String(region).toLowerCase() === 'india';
@@ -429,21 +399,21 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     }
 
     const safeCurrentData = normalizeFirebasePayload(currentData);
+    const comparisonReady = diffMode === 'hourly'
+      ? refs.current.hourlySnapshotReady
+      : refs.current.dailySnapshotReady;
+    if (activeSalesMode !== 'advance' && !comparisonReady) return;
     const safeDailySnapshot = normalizeFirebasePayload(dailySnapshot || safeCurrentData);
     const safeHourlySnapshot = normalizeFirebasePayload(hourlySnapshot || safeCurrentData);
 
     const currentDiffMode = diffMode;
-    const selectedComparisonSnapshot = currentDiffMode === 'hourly' ? hourlySnapshot : dailySnapshot;
-    const snapshotData = isHistoricalAdvance
+    const snapshotData = activeSalesMode === 'advance'
       ? safeCurrentData
-      : selectedComparisonSnapshot
-        ? currentDiffMode === 'hourly' ? safeHourlySnapshot : safeDailySnapshot
-        : safeCurrentData;
+      : currentDiffMode === 'hourly' ? safeHourlySnapshot : safeDailySnapshot;
 
     if (!safeCurrentData || !snapshotData) return;
 
-    const growthEnabled = !isHistoricalAdvance && Boolean(selectedComparisonSnapshot);
-    let growthSince = !growthEnabled
+    let growthSince = activeSalesMode === 'advance'
       ? 'N/A'
       : currentDiffMode === 'hourly' ? growthSinceHourly : growthSinceDaily;
 
@@ -598,14 +568,14 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       }
     });
 
-    const differences = includeDifferences ? {
+    const differences = {
       addedShows: [],
       removedShows: [],
       ticketsBooked: [],
       ticketsCancelled: []
-    } : null;
+    };
 
-    if (differences) rawCurrent.forEach((r, idx) => {
+    rawCurrent.forEach((r, idx) => {
       if (r.is_extra || r.t_id === 'EXTRA') return;
       const sRow = currentMatchedSnap.get(idx);
       const currBooked = normalizeNumber(r.booked);
@@ -628,7 +598,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       }
     });
 
-    if (differences) rawSnapshot.forEach(r => {
+    rawSnapshot.forEach(r => {
       if (r.is_extra || r.t_id === 'EXTRA') return;
       if (!r._matched) {
         const theaterName = r.theater || r['Theater Name'] || r['Theater'];
@@ -636,12 +606,10 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       }
     });
 
-    if (differences) {
-      differences.addedShows.sort((a, b) => normalizeNumber(b.gross) - normalizeNumber(a.gross));
-      differences.removedShows.sort((a, b) => normalizeNumber(b.gross || b['Gross ($)'] || b['Gross']) - normalizeNumber(a.gross || a['Gross ($)'] || a['Gross']));
-      differences.ticketsBooked.sort((a, b) => b.diffBooked - a.diffBooked);
-      differences.ticketsCancelled.sort((a, b) => b.diffBooked - a.diffBooked);
-    }
+    differences.addedShows.sort((a, b) => normalizeNumber(b.gross) - normalizeNumber(a.gross));
+    differences.removedShows.sort((a, b) => normalizeNumber(b.gross || b['Gross ($)'] || b['Gross']) - normalizeNumber(a.gross || a['Gross ($)'] || a['Gross']));
+    differences.ticketsBooked.sort((a, b) => b.diffBooked - a.diffBooked);
+    differences.ticketsCancelled.sort((a, b) => b.diffBooked - a.diffBooked);
 
     const aggregate = (dataset) => {
       let totalGross = 0;
@@ -900,14 +868,13 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       filteredKpis: initialFilteredKpis,
       differences,
       metadata: {
-        lastUpdated: formatIstTimestamp(isHistoricalAdvance
+        lastUpdated: formatIstTimestamp(activeSalesMode === 'advance'
           ? currentData.last_updated || currentData.lastUpdated || lastUpdated
           : lastUpdated),
         growthSince: growthSince,
         showDate,
         movieSlug,
         salesMode: activeSalesMode,
-        growthEnabled,
         posterUrl: refs.current.posterUrl
       },
       error: null,
@@ -917,12 +884,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     sessionDashboardCache.set(`${region}/${movieSlug}/${showDate}/${diffMode}/${activeSalesMode}/timestamp-v2`, nextData);
     setData(nextData);
 
-  }, [diffMode, enabled, includeDifferences, movieSlug, region, showDate]);
-
-  const processRef = useRef(process);
-  useEffect(() => {
-    processRef.current = process;
-  }, [process]);
+  }, [diffMode, enabled, movieSlug, region, showDate]);
 
   useEffect(() => {
     const requestId = requestIdRef.current + 1;
@@ -942,11 +904,22 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         growthSinceDaily: 'N/A',
         growthSinceHourly: 'N/A',
         receivedInitialCurrentData: false,
-        currentDataReady: false,
-        advanceSnapshotReady: false,
         lastLiveUpdate: null,
         posterUrl: ''
       };
+      setData({
+        loading: false,
+        kpis: null,
+        tables: null,
+        rawRows: [],
+        historyData: [],
+        hasAdvanceSnapshot: false,
+        filteredKpis: null,
+        metadata: null,
+        error: null,
+        differences: null,
+        lastLiveUpdate: null
+      });
       return undefined;
     }
 
@@ -963,14 +936,22 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       growthSinceDaily: 'N/A',
       growthSinceHourly: 'N/A',
       receivedInitialCurrentData: false,
-      currentDataReady: false,
-      advanceSnapshotReady: false,
       lastLiveUpdate: null,
       posterUrl: ''
     };
 
     const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/${salesModeRef.current}/timestamp-v2`;
+    let cachedFrameId;
+    let cachedTimerId;
     if (refreshKey > 0) sessionDashboardCache.delete(cacheKey);
+    if (sessionDashboardCache.has(cacheKey)) {
+      const cachedData = sessionDashboardCache.get(cacheKey);
+      cachedFrameId = requestAnimationFrame(() => {
+        cachedTimerId = setTimeout(() => {
+          if (requestIdRef.current === requestId) setData(cachedData);
+        }, 0);
+      });
+    }
 
     const paths = getMovieDateCandidates(region, movieSlug);
     const validPaths = paths.filter(Boolean);
@@ -989,11 +970,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
       const unsubCurrent = onValue(currentRef, (snapshot) => {
         if (requestIdRef.current !== requestId) return;
-        refs.current.currentDataReady = true;
-        if (!snapshot.exists()) {
-          processRef.current();
-          return;
-        }
+        if (!snapshot.exists()) return;
         const payload = normalizeFirebasePayload(snapshot.val());
         if (!payload || (!payload.data && !payload.master_shows_data && !payload.last_snapshot)) return;
 
@@ -1006,7 +983,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         } else {
           refs.current.receivedInitialCurrentData = true;
         }
-        processRef.current();
+        process();
       }, (error) => {
           if (requestIdRef.current !== requestId) return;
           setData(prev => ({ ...prev, loading: false, error: error.message }));
@@ -1016,26 +993,8 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
       const unsubPoster = onValue(posterRef, (snapshot) => {
         if (requestIdRef.current !== requestId) return;
-        const nextPosterUrl = snapshot.exists() ? getPosterUrl(snapshot.val()) : '';
-        if (refs.current.posterUrl === nextPosterUrl) return;
-        refs.current.posterUrl = nextPosterUrl;
-        setData((previous) => {
-          if (
-            previous.metadata?.movieSlug !== movieSlug ||
-            previous.metadata?.showDate !== showDate ||
-            previous.metadata?.salesMode !== salesModeRef.current
-          ) return previous;
-
-          const nextData = {
-            ...previous,
-            metadata: { ...previous.metadata, posterUrl: nextPosterUrl }
-          };
-          sessionDashboardCache.set(
-            `${region}/${movieSlug}/${showDate}/${diffModeRef.current}/${salesModeRef.current}/timestamp-v2`,
-            nextData
-          );
-          return nextData;
-        });
+        refs.current.posterUrl = snapshot.exists() ? getPosterUrl(snapshot.val()) : '';
+        process();
       });
 
       unsubscribes.push(unsubPoster);
@@ -1048,8 +1007,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
           : [];
         refs.current.hasAdvanceSnapshot = snapshotRows.some((row) => row && typeof row === 'object');
         refs.current.advanceSnapshot = refs.current.hasAdvanceSnapshot ? payload : null;
-        refs.current.advanceSnapshotReady = true;
-        if (isHistoricalAdvanceRef.current) processRef.current();
+        process();
       });
 
       unsubscribes.push(unsubAdvanceSnapshot);
@@ -1060,16 +1018,12 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         if (requestIdRef.current !== requestId) return;
         refs.current.dailySnapshotReady = true;
         if (!snapshot.exists()) {
-          if (!isHistoricalAdvanceRef.current && diffModeRef.current === 'daily') {
-            processRef.current();
-          }
+          process();
           return;
         }
         const payload = normalizeFirebasePayload(snapshot.val());
         if (!payload || (!payload.data && !payload.last_snapshot)) {
-          if (!isHistoricalAdvanceRef.current && diffModeRef.current === 'daily') {
-            processRef.current();
-          }
+          process();
           return;
         }
 
@@ -1077,25 +1031,19 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         if (refs.current.dailySnapshot?.timestamp) {
           refs.current.growthSinceDaily = formatUtcToIst(refs.current.dailySnapshot.timestamp);
         }
-        if (!isHistoricalAdvanceRef.current && diffModeRef.current === 'daily') {
-          processRef.current();
-        }
+        process();
       });
 
       const unsubHourlySnapshot = onValue(hourlySnapshotRef, (snapshot) => {
         if (requestIdRef.current !== requestId) return;
         refs.current.hourlySnapshotReady = true;
         if (!snapshot.exists()) {
-          if (!isHistoricalAdvanceRef.current && diffModeRef.current === 'hourly') {
-            processRef.current();
-          }
+          process();
           return;
         }
         const payload = normalizeFirebasePayload(snapshot.val());
         if (!payload || (!payload.data && !payload.previous_run_snapshot)) {
-          if (!isHistoricalAdvanceRef.current && diffModeRef.current === 'hourly') {
-            processRef.current();
-          }
+          process();
           return;
         }
 
@@ -1103,9 +1051,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         if (refs.current.hourlySnapshot?.timestamp) {
           refs.current.growthSinceHourly = formatUtcToIst(refs.current.hourlySnapshot.timestamp);
         }
-        if (!isHistoricalAdvanceRef.current && diffModeRef.current === 'hourly') {
-          processRef.current();
-        }
+        process();
       });
 
       const unsubHistory = onValue(historyRef, (snapshot) => {
@@ -1115,20 +1061,7 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
         if (!hData) return;
 
         refs.current.historyDataRaw = Object.values(hData).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-        setData((previous) => {
-          if (
-            previous.metadata?.movieSlug !== movieSlug ||
-            previous.metadata?.showDate !== showDate ||
-            previous.metadata?.salesMode !== salesModeRef.current
-          ) return previous;
-
-          const nextData = { ...previous, historyData: refs.current.historyDataRaw };
-          sessionDashboardCache.set(
-            `${region}/${movieSlug}/${showDate}/${diffModeRef.current}/${salesModeRef.current}/timestamp-v2`,
-            nextData
-          );
-          return nextData;
-        });
+        process();
       });
 
       unsubscribes.push(unsubSnapshot, unsubHourlySnapshot, unsubHistory);
@@ -1138,26 +1071,22 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
 
     return () => {
       if (requestIdRef.current === requestId) requestIdRef.current += 1;
+      cancelAnimationFrame(cachedFrameId);
+      clearTimeout(cachedTimerId);
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  // Keep live listeners stable; the processor ref tracks diff-mode changes without resubscribing.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, movieSlug, region, showDate, refreshKey]);
+  }, [enabled, movieSlug, process, region, showDate, refreshKey]);
 
   useEffect(() => {
     if (!enabled) return;
     process();
   }, [diffMode, enabled, process, refreshKey, salesMode]);
 
-  const cacheKey = `${region}/${movieSlug}/${showDate}/${diffMode}/${salesMode}/timestamp-v2`;
-  const cachedData = sessionDashboardCache.get(cacheKey);
-  const displayData = cachedData || data;
-
   return {
-    ...displayData,
+    ...data,
     region,
     movieSlug,
     showDate,
-    includeDifferences: includeDifferences && displayData.metadata?.growthEnabled === true
+    includeDifferences
   };
 };

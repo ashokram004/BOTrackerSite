@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const formatCurrency = (val) => {
   return `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -6,7 +6,7 @@ const formatCurrency = (val) => {
 
 const formatNumber = (val) => Number(val).toLocaleString();
 
-export const DifferenceTable = memo(({ title, data, type }) => {
+export const DifferenceTable = ({ title, data, type }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 20;
 
@@ -107,4 +107,4 @@ export const DifferenceTable = memo(({ title, data, type }) => {
       </div>
     </div>
   );
-});
+};

@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 const parseNumber = (val) => {
   if (val === null || val === undefined) return 0;
@@ -44,7 +44,7 @@ const formatToIst = (timestamp) => {
   }
 };
 
-export const HistoryTable = memo(({ data, currency = 'USD', showGrowth = true }) => {
+export const HistoryTable = ({ data, currency = 'USD', showGrowth = true }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 10;
   const sorted = useMemo(() => {
@@ -120,4 +120,4 @@ export const HistoryTable = memo(({ data, currency = 'USD', showGrowth = true })
       )}
     </div>
   );
-});
+};
