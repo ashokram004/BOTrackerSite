@@ -6783,7 +6783,7 @@ html.theme-transitioning-to-dark::after {
 @media (max-width: 640px) {
   .dashboard-page .dashboard-header-actions {
     display: grid !important;
-    grid-template-columns: minmax(0, clamp(96px, 30vw, 112px)) minmax(0, 1fr) !important;
+    grid-template-columns: 96px minmax(0, 1fr) !important;
     grid-auto-flow: row;
     align-items: end;
     gap: 4px !important;
