@@ -6795,6 +6795,63 @@ html.theme-transitioning-to-dark::after {
   }
 }
 
+@media (max-width: 640px) {
+  .dashboard-page .dashboard-header-actions {
+    display: flex !important;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 4px !important;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-page .dashboard-header-actions > .dashboard-date-action {
+    flex: 0 0 clamp(96px, 30vw, 112px);
+    width: clamp(96px, 30vw, 112px);
+    min-width: 0;
+  }
+
+  .dashboard-page .dashboard-header-actions > .dashboard-date-action .dashboard-date-control,
+  .dashboard-page .dashboard-header-actions > .dashboard-date-action .dashboard-date-select-wrap {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-page .dashboard-header-actions > .dashboard-date-action .dashboard-date-select-wrap select {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    padding-right: 26px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dashboard-page .dashboard-header-actions > .dashboard-header-right-actions {
+    display: flex !important;
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    grid-column: auto !important;
+    width: 0;
+    min-width: 0;
+    gap: 4px !important;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .dashboard-page .dashboard-header-actions > .dashboard-header-right-actions > .dashboard-action-btn {
+    flex: 1 1 0;
+    width: 0 !important;
+    min-width: 0 !important;
+    padding-inline: 2px;
+    white-space: nowrap;
+  }
+}
+
 .site-nav-indicator,
 .dashboard-sales-mode-indicator {
   position: absolute;
