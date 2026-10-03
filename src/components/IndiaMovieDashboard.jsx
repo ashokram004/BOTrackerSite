@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
@@ -115,7 +115,8 @@ const getLatestHistoryDeltas = (historyData) => {
     gross: getDelta(['total_gross', 'totalGross', 'booked_gross', 'bookedGross']),
     tickets: getDelta(['booked_tickets', 'bookedTickets']),
     venues: getDelta(['venues']),
-    shows: getDelta(['shows'])
+    shows: getDelta(['shows']),
+    occupancy: getDelta(['occupancy'])
   };
 };
 
@@ -151,22 +152,21 @@ const getSourceClass = (source = 'Unknown') => {
   return 'src-dist';
 };
 
-export const IndiaMovieDashboard = memo(({
+export const IndiaMovieDashboard = ({
   rows = [],
   historyData = [],
+  hasAdvanceSnapshot = false,
   salesView = 'total',
-  salesModeOptions = [],
-  onSalesViewChange,
+  onToggleSalesView,
   movieName = 'Movie',
   showDate = 'N/A',
-  dates = [],
-  onDateChange,
   moviePosterUrl = '',
+  onBack,
   onChangeMovie,
+  onHome,
   onReload,
   lastUpdated = 'N/A',
-  growthSince = 'N/A',
-  growthEnabled = true
+  growthSince = 'N/A'
 }) => {
   const [filters, setFilters] = useState({
     platform: [],
@@ -184,15 +184,7 @@ export const IndiaMovieDashboard = memo(({
   });
 
   const [showFilters, setShowFilters] = useState(false);
-  const [showGrowth, setShowGrowth] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const hasGrowthData = growthEnabled && historyData.filter(
-    (snapshot) => snapshot && typeof snapshot === 'object'
-  ).length > 1;
-
-  useEffect(() => {
-    if (!hasGrowthData) setShowGrowth(false);
-  }, [hasGrowthData]);
 
   // State / City / Theatre expansion states
   const [showAllStates, setShowAllStates] = useState(false);
@@ -645,7 +637,9 @@ export const IndiaMovieDashboard = memo(({
     },
     {
       label: 'Overall Occupancy',
-      value: `${Number(occupancy).toFixed(1)}%`
+      value: `${Number(occupancy).toFixed(1)}%`,
+      growth: historyDeltas.occupancy,
+      growthFormat: 'percentage-points'
     },
     {
       label: 'Fast Filling / House Full',
@@ -756,7 +750,7 @@ export const IndiaMovieDashboard = memo(({
     <div key={card.label} className="kpi-card">
       <div className="kpi-head">
         <div className="kpi-title">{card.label}</div>
-        {showGrowth && card.growth !== null && card.growth !== undefined && card.growth !== 0 && (
+        {card.growth !== null && card.growth !== undefined && card.growth !== 0 && (
           <div
             className={`kpi-sub ${card.growth > 0 ? 'delta-positive' : 'delta-negative'}`}
             style={{ color: card.growth > 0 ? '#4ade80' : '#f87171' }}
@@ -908,34 +902,36 @@ export const IndiaMovieDashboard = memo(({
   );
 
   return (
-    <main className="site-main dashboard-page">
+    <div id="app">
       <div className="container">
         <DashboardHeader
-          marketLabel="INDIA BOX OFFICE"
+          marketLabel={<><span className="dashboard-brand">TheWkndCinema</span> India Box Office Tracking</>}
           movieName={movieName}
           showDate={showDate}
-          dateOptions={dates}
-          onDateChange={onDateChange}
-          salesMode={salesView}
-          salesModeOptions={salesModeOptions}
-          onSalesModeChange={onSalesViewChange}
-          rightActionsClassName="india-dashboard-right-actions"
           lastUpdated={growthSince !== 'N/A'
             ? `${lastUpdated} • Growth since ${growthSince} IST`
             : lastUpdated}
           moviePosterUrl={moviePosterUrl || DEFAULT_MOVIE_POSTER_URL}
           leftActions={[
             {
+              label: 'Home',
+              onClick: onHome,
+              variant: 'secondary'
+            },
+            {
               label: 'Change Movie',
               onClick: onChangeMovie,
-              variant: 'secondary',
-              mobileLabel: 'Change Movie'
+              variant: 'secondary'
+            },
+            {
+              label: 'Change Date',
+              onClick: onBack,
+              variant: 'secondary'
             },
             {
               label: 'Reload Data',
               onClick: onReload,
-              variant: 'secondary',
-              mobileLabel: 'Reload Data'
+              variant: 'secondary'
             }
           ]}
           rightActions={[
@@ -945,31 +941,18 @@ export const IndiaMovieDashboard = memo(({
                 : 'Show Filters',
               onClick: () =>
                 setShowFilters((v) => !v),
-              variant: 'secondary',
-              isActive: showFilters,
-              mobileLabel: 'Filters',
-              mobileIcon: 'filter'
+              variant: 'secondary'
             },
-            {
-              label: 'Growth',
-              ariaLabel: showGrowth ? 'Hide growth details' : 'Show growth details',
-              onClick: () => setShowGrowth((value) => !value),
-              disabled: !hasGrowthData || !growthEnabled,
-              variant: 'secondary',
-              isActive: showGrowth,
-              neutralHoverWhenInactive: true,
-              activeStyle: 'dashboard-action-btn--growth-active',
-              icon: 'growth',
-              mobileLabel: 'Growth',
-              mobileIcon: 'growth'
-            },
+            ...(hasAdvanceSnapshot ? [{
+              label: salesView === 'advance' ? 'Total Sales' : 'Advance Sales',
+              onClick: onToggleSalesView,
+              variant: 'secondary'
+            }] : []),
             {
               label: isGeneratingImage ? 'Generating...' : 'Export Image',
               onClick: handleExportImage,
               variant: 'primary',
-              disabled: isGeneratingImage,
-              mobileLabel: isGeneratingImage ? 'Wait' : 'Export',
-              mobileIcon: 'export'
+              disabled: isGeneratingImage
             }
           ]}
         />
@@ -1173,9 +1156,9 @@ export const IndiaMovieDashboard = memo(({
 
               <tbody>
                 {(showAllRegionState ? groupedStates : groupedStates.slice(0, 10)).flatMap((group) => [
-                  <tr key={`${group.state}-header`} className="territory-group-header">
+                  <tr key={`${group.state}-header`}>
                     <td colSpan={5} style={{
-                      padding: '10px 12px',
+                      padding: '10px 14px',
                       background: 'rgba(148, 163, 184, 0.16)',
                       color: 'var(--text-main)',
                       fontWeight: 700,
@@ -1570,12 +1553,12 @@ export const IndiaMovieDashboard = memo(({
         </div>
 
         <HistoryTable data={historyData} currency="INR" showGrowth={false} />
-        {showGrowth && <IndiaGrossGrowthChart historyData={historyData} />}
+        <IndiaGrossGrowthChart historyData={historyData} />
 
         <div className="footer">
-          @TheWkndCinema • BookMyShow + District • Including blocked seats.
+          @TheWkndCinema • BookMyShow + District Data • Including blocked seats.
         </div>
       </div>
-    </main>
+    </div>
   );
-});
+};

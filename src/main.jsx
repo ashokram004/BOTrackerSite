@@ -8,7 +8,11 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/:region?/:movie?/:date?" element={<App />} />
+        <Route path="/" element={<App />} />
+        <Route path="/:region" element={<App />} />
+        <Route path="/:region/:movie" element={<App />} />
+        <Route path="/:region/:movie/:date" element={<App />} />
+        <Route path="*" element={<App />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,

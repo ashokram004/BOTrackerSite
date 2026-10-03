@@ -219,7 +219,7 @@ const getRowsFromPayload = (value) => {
 };
 
 export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0 }) => {
-  const [data, setData] = useState({ loading: true, rows: [], advanceRows: [], currentSnapshotReady: false, advanceSnapshotReady: false, hasAdvanceSnapshot: false, historyData: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A', advanceLastUpdated: 'N/A', growthSince: 'N/A' });
+  const [data, setData] = useState({ loading: true, rows: [], advanceRows: [], hasAdvanceSnapshot: false, historyData: [], error: null, movieName: movieSlug || 'Movie', showDate: showDate || 'N/A', lastUpdated: 'N/A', growthSince: 'N/A' });
 
   useEffect(() => {
     if (!enabled || !movieSlug || !showDate) {
@@ -234,12 +234,19 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     let active = true;
 
     if (refreshKey > 0) sessionIndiaDashboardCache.delete(cacheKey);
+    let frameId;
+    let timerId;
+    if (sessionIndiaDashboardCache.has(cacheKey)) {
+      const cachedData = sessionIndiaDashboardCache.get(cacheKey);
+      frameId = requestAnimationFrame(() => {
+        timerId = setTimeout(() => {
+          if (active) setData(cachedData);
+        }, 100);
+      });
+    }
 
     let latestRows = [];
     let latestAdvanceRows = [];
-    let latestAdvanceLastUpdated = null;
-    let currentSnapshotReady = false;
-    let advanceSnapshotReady = false;
     let hasAdvanceSnapshot = false;
     let latestHistory = [];
     let latestLastUpdated = null;
@@ -251,15 +258,12 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
         loading: false,
         rows: rows || [],
         advanceRows: latestAdvanceRows,
-        currentSnapshotReady,
-        advanceSnapshotReady,
         hasAdvanceSnapshot,
         historyData: latestHistory,
         error,
         movieName: movieSlug,
         showDate,
         lastUpdated: formatIstDate(lastUpdatedValue || 'N/A'),
-        advanceLastUpdated: formatIstDate(latestAdvanceLastUpdated || 'N/A'),
         growthSince: latestHistory.length >= 2
           ? formatIstDate(latestHistory[latestHistory.length - 2].timestamp || 'N/A')
           : 'N/A',
@@ -272,14 +276,7 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     const unsubscribePoster = onValue(ref(database, posterPath), (snapshot) => {
       if (!active) return;
       latestPosterUrl = snapshot.exists() ? getPosterUrl(snapshot.val()) : '';
-      if (!latestRows.length) return;
-
-      setData((previous) => {
-        if (previous.movieName !== movieSlug || previous.showDate !== showDate) return previous;
-        const nextData = { ...previous, posterUrl: latestPosterUrl };
-        sessionIndiaDashboardCache.set(cacheKey, nextData);
-        return nextData;
-      });
+      if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
     });
 
     const unsubscribeHistory = onValue(ref(database, historyPath), (snapshot) => {
@@ -289,20 +286,7 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
         ? Object.values(value).filter((entry) => entry && typeof entry === 'object')
         : [];
       latestHistory.sort((a, b) => new Date(a.timestamp || 0) - new Date(b.timestamp || 0));
-      if (!latestRows.length) return;
-
-      setData((previous) => {
-        if (previous.movieName !== movieSlug || previous.showDate !== showDate) return previous;
-        const nextData = {
-          ...previous,
-          historyData: latestHistory,
-          growthSince: latestHistory.length >= 2
-            ? formatIstDate(latestHistory[latestHistory.length - 2].timestamp || 'N/A')
-            : 'N/A'
-        };
-        sessionIndiaDashboardCache.set(cacheKey, nextData);
-        return nextData;
-      });
+      if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
     }, (error) => {
       if (active) console.error('Failed to load India history:', error);
     });
@@ -311,31 +295,13 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
       if (!active) return;
       const flattened = snapshot.exists() ? getRowsFromPayload(snapshot.val()) : { rows: [] };
       latestAdvanceRows = flattened.rows;
-      latestAdvanceLastUpdated = flattened.lastUpdated
-        || latestAdvanceRows.find((row) => row.lastUpdated)?.lastUpdated
-        || null;
-      advanceSnapshotReady = true;
       hasAdvanceSnapshot = latestAdvanceRows.length > 0;
-      if (!latestRows.length) return;
-
-      setData((previous) => {
-        if (previous.movieName !== movieSlug || previous.showDate !== showDate) return previous;
-        const nextData = {
-          ...previous,
-          advanceRows: latestAdvanceRows,
-          advanceLastUpdated: formatIstDate(latestAdvanceLastUpdated || 'N/A'),
-          advanceSnapshotReady,
-          hasAdvanceSnapshot
-        };
-        sessionIndiaDashboardCache.set(cacheKey, nextData);
-        return nextData;
-      });
+      if (latestRows.length) finalize(latestRows, null, latestLastUpdated, latestPosterUrl);
     }, (error) => {
       if (active) console.error('Failed to load India advance snapshot:', error);
     });
 
     const unsubscribe = onValue(ref(database, candidates[0]), (snapshot) => {
-      currentSnapshotReady = true;
       if (!snapshot.exists()) {
         finalize([]);
         return;
@@ -357,6 +323,8 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
 
     return () => {
       active = false;
+      cancelAnimationFrame(frameId);
+      clearTimeout(timerId);
       unsubscribe();
       unsubscribePoster();
       unsubscribeHistory();
@@ -364,7 +332,5 @@ export const useIndiaMovieData = ({ enabled, movieSlug, showDate, refreshKey = 0
     };
   }, [enabled, movieSlug, showDate, refreshKey]);
 
-  const cacheKey = `${movieSlug}/${showDate}`;
-  const cachedData = sessionIndiaDashboardCache.get(cacheKey);
-  return useMemo(() => cachedData || data, [cachedData, data]);
+  return useMemo(() => data, [data]);
 };
