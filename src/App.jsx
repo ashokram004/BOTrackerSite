@@ -14,6 +14,7 @@ import { get, ref } from 'firebase/database';
 import './App.css';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useSlidingIndicator } from './hooks/useSlidingIndicator';
 
 const EMPTY_ARRAY = [];
 
@@ -39,14 +40,21 @@ const REGION_META = {
   }
 };
 
-const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegion }) => (
+const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegion }) => {
+  const { containerRef: navRef, indicatorStyle: navIndicatorStyle } = useSlidingIndicator(
+    '.site-nav button.active',
+    selectedRegion || 'overview'
+  );
+
+  return (
   <header className="site-header">
     <div className="site-header-inner">
       <button className="site-brand" type="button" onClick={onHome} aria-label="The Wknd Cinema home">
         <img className="site-brand-logo" src="/appicon.png" alt="" />
       </button>
 
-      <nav className="site-nav" aria-label="Main navigation">
+      <nav ref={navRef} className="site-nav" aria-label="Main navigation">
+        <span className="site-nav-indicator" aria-hidden="true" style={navIndicatorStyle} />
         <button type="button" className={!selectedRegion ? 'active' : ''} onClick={onHome}>
           Overview
         </button>
@@ -79,7 +87,8 @@ const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegi
       </div>
     </div>
   </header>
-);
+  );
+};
 
 const getMovieRootCandidates = (region) => {
   const normalized = String(region || '').toLowerCase();
@@ -772,7 +781,6 @@ function App() {
 
   const handleSelectRegion = (key) => {
     window.scrollTo(0, 0);
-    document.documentElement.classList.add('is-route-loading');
     const isSameRegion = selectedRegion === key;
     const cachedMovies = sessionProcessedMovieCache.get(key);
     setHomeTransitionLoading(false);
@@ -931,7 +939,7 @@ function App() {
             salesModeOptions={salesModeOptions}
             onSalesModeChange={handleSalesViewChange}
             lastUpdated={metadata
-              ? `${metadata.lastUpdated} IST${metadata.growthEnabled && metadata.growthSince && metadata.growthSince !== 'N/A' ? ` • Growth since ${metadata.growthSince} IST` : ''}`
+              ? `${metadata.lastUpdated} IST${showUsGrowth && growthAvailable && metadata.growthEnabled && metadata.growthSince && metadata.growthSince !== 'N/A' ? ` • Growth since ${metadata.growthSince} IST` : ''}`
               : 'N/A'}
             moviePosterUrl={metadata?.posterUrl || DEFAULT_MOVIE_POSTER_URL}
             rightActionsClassName="usa-dashboard-right-actions"
@@ -1007,7 +1015,7 @@ function App() {
           {includeDifferences && differences && (
             <div className="differences-container" style={{ marginTop: '40px' }}>
               <h2 style={{ fontSize: '24px', marginBottom: '20px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                Difference Details ({diffMode === 'hourly' ? 'Since Previous Run' : 'Daily'})
+                Difference Details ({diffMode === 'hourly' ? 'Since Previous Report' : 'Daily'})
               </h2>
               <div className="dashboard-row">
                 <DifferenceTable title="New Shows Added" data={differences.addedShows} type="added" />
@@ -1219,7 +1227,7 @@ function App() {
                   {movieSearch.trim()
                     ? `No titles match “${movieSearch.trim()}”. Try another search.`
                     : activeMovieShelf === 'coming_soon'
-                      ? 'No upcoming titles yet. Movies with future show dates will appear here automatically.'
+                      ? 'No movies found.'
                       : activeMovieShelf === 'ended'
                         ? 'No archived titles found for this market.'
                         : 'No now-playing titles found for this market.'}

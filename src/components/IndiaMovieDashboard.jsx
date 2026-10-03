@@ -920,7 +920,7 @@ export const IndiaMovieDashboard = memo(({
           salesModeOptions={salesModeOptions}
           onSalesModeChange={onSalesViewChange}
           rightActionsClassName="india-dashboard-right-actions"
-          lastUpdated={growthSince !== 'N/A'
+          lastUpdated={showGrowth && hasGrowthData && growthSince !== 'N/A'
             ? `${lastUpdated} • Growth since ${growthSince} IST`
             : lastUpdated}
           moviePosterUrl={moviePosterUrl || DEFAULT_MOVIE_POSTER_URL}

@@ -41,17 +41,23 @@ export const FilterPanel = memo(({
   return (
     <div className={`filter-panel multi-select-panel ${!showFilters ? 'hidden' : ''}`}>
       <div className="filter-grid">
-        <label className="growth-comparison-filter">
-          <span className="filter-label">Growth Comparison</span>
-          <select
-            className="filter-select"
-            value={diffMode}
-            onChange={(event) => onDiffModeChange?.(event.target.value)}
-          >
-            <option value="hourly">Since Previous Run</option>
-            <option value="daily">Daily</option>
-          </select>
-        </label>
+        <div className="multi-select-filter growth-comparison-filter">
+          <label className="filter-label" htmlFor="growth-comparison-filter">
+            Growth Comparison
+          </label>
+          <div className="filter-select-shell">
+            <select
+              id="growth-comparison-filter"
+              className="filter-select"
+              value={diffMode}
+              onChange={(event) => onDiffModeChange?.(event.target.value)}
+            >
+              <option value="hourly">Since Previous Report</option>
+              <option value="daily">Daily</option>
+            </select>
+            <span className="filter-select-arrow" aria-hidden="true">▾</span>
+          </div>
+        </div>
 
         <MultiSelectFilter
           label="State"
