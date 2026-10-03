@@ -6817,6 +6817,7 @@ html.theme-transitioning-to-dark::after {
     box-sizing: border-box;
     overflow: hidden;
     padding-right: 26px;
+    font-size: 10px;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
