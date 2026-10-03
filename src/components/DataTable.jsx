@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 const formatCurrency = (val) => {
   return `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -21,7 +21,7 @@ const getOccupancyColor = (occ) => {
 
 const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
-export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheater }) => {
+export const DataTable = memo(({ title, data, isFormat, isLanguage, isState, isTheater, showGrowth = true }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 20;
 
@@ -31,7 +31,7 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
   }, [data, showAll, rowLimit]);
 
   return (
-    <div className="summary-section us-summary-table">
+    <div className={`summary-section us-summary-table${showGrowth ? '' : ' us-summary-table--without-growth'}`}>
       <h2>{title}</h2>
       <div className="table-scroll table-scroll-us" style={{ overflowX: 'auto', width: '100%' }}>
         <table>
@@ -42,7 +42,7 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
               <th>Tickets</th>
               <th>Gross</th>
               <th>Occ</th>
-              <th>Growth</th>
+              {showGrowth && <th>Growth</th>}
             </tr>
           </thead>
           <tbody>
@@ -67,9 +67,11 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
                   <td style={{ color: getOccupancyColor(row.occ) }}>
                     {Number(row.occ).toFixed(1)}%
                   </td>
-                  <td style={{ color: growthColor }}>
-                    {formatDeltaValue(dGross)}
-                  </td>
+                  {showGrowth && (
+                    <td style={{ color: growthColor }}>
+                      {formatDeltaValue(dGross)}
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -77,7 +79,7 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
             {!visibleRows.length && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={showGrowth ? 6 : 5}
                   style={{
                     textAlign: 'center',
                     padding: '18px',
@@ -93,7 +95,7 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
 
               <tr>
 
-                <td colSpan={6} style={{ textAlign: 'center', padding: '18px', borderBottom: 'none' }}>
+                <td colSpan={showGrowth ? 6 : 5} style={{ textAlign: 'center', padding: '18px', borderBottom: 'none' }}>
                   <button
                     onClick={() => setShowAll((prev) => !prev)}
                     className="toggle-btn"
@@ -109,4 +111,4 @@ export const DataTable = ({ title, data, isFormat, isLanguage, isState, isTheate
       </div>
     </div>
   );
-};
+});

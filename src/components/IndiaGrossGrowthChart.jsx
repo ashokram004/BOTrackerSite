@@ -208,7 +208,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
         </svg>
 
         {hoveredPoint && (
-          <div style={{
+          <div className="gross-growth-tooltip" style={{
             position: 'absolute',
             top: '12px',
             right: '12px',

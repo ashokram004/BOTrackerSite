@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 
 const formatCurrency = (val) => {
   if (!Number.isFinite(Number(val))) return '$0';
@@ -20,7 +20,7 @@ const getOccupancyColor = (occ) => {
 
 const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
-export const ShowsTable = ({ rows }) => {
+export const ShowsTable = memo(({ rows }) => {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
   const [showAll, setShowAll] = useState(false);
@@ -135,4 +135,4 @@ export const ShowsTable = ({ rows }) => {
       )}
     </div>
   );
-};
+});
