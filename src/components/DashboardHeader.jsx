@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useSlidingIndicator } from '../hooks/useSlidingIndicator';
 
 export const DEFAULT_MOVIE_POSTER_URL = 'https://drive.google.com/thumbnail?id=15N4n9XlpRgxsAui3T7SQd02yZUMSmSLD&sz=w1000';
 
@@ -109,6 +110,11 @@ export const DashboardHeader = ({
   rightActions = [],
   rightActionsClassName = ''
 }) => {
+  const { containerRef: salesModeRef, indicatorStyle: salesModeIndicatorStyle } = useSlidingIndicator(
+    '.dashboard-sales-mode-options button[aria-pressed="true"]',
+    salesMode
+  );
+
   let [updatedValue, growthValue] = String(lastUpdated || '').split(' • Growth since ');
   updatedValue = updatedValue.toUpperCase();
   updatedValue = updatedValue.endsWith('IST') ? updatedValue : `${updatedValue} IST`;
@@ -199,7 +205,8 @@ export const DashboardHeader = ({
             <div className="dashboard-header-movie-controls">
               {salesModeOptions.length > 0 && (
                 <div className="dashboard-sales-mode" role="group" aria-label="Sales mode">
-                  <div className="dashboard-sales-mode-options">
+                  <div ref={salesModeRef} className="dashboard-sales-mode-options">
+                    <span className="dashboard-sales-mode-indicator" aria-hidden="true" style={salesModeIndicatorStyle} />
                     {salesModeOptions.map((option) => (
                       <button
                         key={option.value}
@@ -224,28 +231,22 @@ export const DashboardHeader = ({
                   {renderActions(leftActions)}
                 </div>
               )}
-              {!hasGrowthValue && (
-                <div className="dashboard-header-inline-update">
+              <div className={`dashboard-header-inline-update${hasGrowthValue ? ' dashboard-header-inline-update--with-growth' : ''}`}>
+                <div className="dashboard-header-inline-update-group">
                   <span className="dashboard-header-label">Last Updated</span>
                   <span className="dashboard-header-meta">{updatedValue}</span>
                 </div>
-              )}
+                {hasGrowthValue && (
+                  <div className="dashboard-header-inline-update-group">
+                    <span className="dashboard-header-label">Growth Since</span>
+                    <span className="dashboard-header-meta">{growthValue}</span>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
 
-        {hasGrowthValue && (
-          <div className="dashboard-header-right">
-            <div className="dashboard-header-meta-group">
-              <div className="dashboard-header-label">Last Updated</div>
-              <div className="dashboard-header-meta">{updatedValue}</div>
-            </div>
-            <div className="dashboard-header-meta-group-right">
-              <div className="dashboard-header-label">Growth Since</div>
-              <div className="dashboard-header-meta">{growthValue}</div>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="dashboard-header-actions">
