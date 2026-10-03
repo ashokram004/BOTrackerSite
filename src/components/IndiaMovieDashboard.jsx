@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from 'react';
+import { Fragment, memo, useEffect, useMemo, useState } from 'react';
 import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './DashboardHeader';
 import { generateIndiaImageReport } from '../utils/imageGenerator';
 import { TimeFilter } from './TimeFilter';
@@ -1087,6 +1087,7 @@ export const IndiaMovieDashboard = memo(({
           </div>
         )}
 
+        <Fragment key={`${showDate}-${salesView}`}>
         <div className="kpi-grid india-kpi-grid">
           {summaryCards.map(renderSummaryCard)}
         </div>
@@ -1571,6 +1572,8 @@ export const IndiaMovieDashboard = memo(({
 
         <HistoryTable data={historyData} currency="INR" showGrowth={false} />
         {showGrowth && <IndiaGrossGrowthChart historyData={historyData} />}
+
+        </Fragment>
 
         <div className="footer">
           @TheWkndCinema • BookMyShow + District • Including blocked seats.

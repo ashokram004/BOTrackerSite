@@ -12,7 +12,7 @@ import { LoadingState } from './components/LoadingState';
 import { database, databaseUrl } from './firebaseConfig';
 import { get, ref } from 'firebase/database';
 import './App.css';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSlidingIndicator } from './hooks/useSlidingIndicator';
 
@@ -266,11 +266,11 @@ function App() {
   const [showUsGrowth, setShowUsGrowth] = useState(true);
   const [salesModeState, setSalesModeState] = useState({
     movieId: routeMovie?.id || '',
-    mode: 'total'
+    mode: 'advance'
   });
   const selectedMovieId = selectedMovie?.id || '';
   const selectedDateValue = selectedDate || '';
-  const salesView = salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'total';
+  const salesView = salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'advance';
   const isHistoricalAdvance = salesView === 'advance'
     && Boolean(selectedDateValue)
     && selectedDateValue <= getMarketToday(selectedRegion || 'usa');
@@ -453,7 +453,7 @@ function App() {
   }, [navigate, selectedMovieId, selectedRegion]);
 
   useEffect(() => {
-    if (!selectedMovieId || !routeDate) return;
+    if (!selectedMovieId || !routeDate || selectedDateValue !== routeDate) return;
 
     const routeDateMode = Object.keys(datesBySalesMode).find((mode) =>
       datesBySalesMode[mode].includes(routeDate)
@@ -465,7 +465,7 @@ function App() {
         ? previous
         : { movieId: selectedMovieId, mode: routeDateMode }
     );
-  }, [datesBySalesMode, routeDate, salesView, selectedMovieId]);
+  }, [datesBySalesMode, routeDate, salesView, selectedDateValue, selectedMovieId]);
 
   const shouldFetchDashboard = Boolean(selectedRegion && selectedMovie && selectedDate);
   const selectedModeDates = datesBySalesMode[salesView] || [];
@@ -969,64 +969,66 @@ function App() {
             />
           )}
 
-          <KPIGrid kpis={displayedKpis} showGrowth={showUsGrowth && growthAvailable} />
+          <Fragment key={`${selectedDateValue}-${salesView}`}>
+            <KPIGrid kpis={displayedKpis} showGrowth={showUsGrowth && growthAvailable} />
 
-          <div className="dashboard-row">
-            {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat showGrowth={showUsGrowth && growthAvailable} />}
-            {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage showGrowth={showUsGrowth && growthAvailable} />}
-          </div>
+            <div className="dashboard-row">
+              {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat showGrowth={showUsGrowth && growthAvailable} />}
+              {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage showGrowth={showUsGrowth && growthAvailable} />}
+            </div>
 
-          <div className="dashboard-row">
-            {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState showGrowth={showUsGrowth && growthAvailable} />}
-            {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater showGrowth={showUsGrowth && growthAvailable} />}
-          </div>
+            <div className="dashboard-row">
+              {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState showGrowth={showUsGrowth && growthAvailable} />}
+              {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater showGrowth={showUsGrowth && growthAvailable} />}
+            </div>
 
-          <div className="dashboard-row">
-            <DataTable
-              title="Theatre Chain Breakdown"
-              data={displayedTables?.chains || []}
-              showGrowth={showUsGrowth && growthAvailable}
-            />
-            <DataTable
-              title="Time of Day Breakdown"
-              data={displayedTables?.timeCats || []}
-              showGrowth={showUsGrowth && growthAvailable}
-            />
-          </div>
+            <div className="dashboard-row">
+              <DataTable
+                title="Theatre Chain Breakdown"
+                data={displayedTables?.chains || []}
+                showGrowth={showUsGrowth && growthAvailable}
+              />
+              <DataTable
+                title="Time of Day Breakdown"
+                data={displayedTables?.timeCats || []}
+                showGrowth={showUsGrowth && growthAvailable}
+              />
+            </div>
 
-          <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
-            <ShowsTable rows={filteredRows} />
-          </div>
-
-          {dashboardHistoryData && dashboardHistoryData.length > 0 && (
             <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
-              <HistoryTable data={dashboardHistoryData} />
+              <ShowsTable rows={filteredRows} />
             </div>
-          )}
 
-          {dashboardHistoryData && dashboardHistoryData.length > 0 && (
-            <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
-              <Suspense fallback={null}>
-                <PacingChart historyData={dashboardHistoryData} />
-              </Suspense>
-            </div>
-          )}
+            {dashboardHistoryData && dashboardHistoryData.length > 0 && (
+              <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
+                <HistoryTable data={dashboardHistoryData} />
+              </div>
+            )}
 
-          {includeDifferences && differences && (
-            <div className="differences-container" style={{ marginTop: '40px' }}>
-              <h2 style={{ fontSize: '24px', marginBottom: '20px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
-                Difference Details ({diffMode === 'hourly' ? 'Since Previous Report' : 'Daily'})
-              </h2>
-              <div className="dashboard-row">
-                <DifferenceTable title="New Shows Added" data={differences.addedShows} type="added" />
-                <DifferenceTable title="Shows Cancelled/Removed" data={differences.removedShows} type="removed" />
+            {dashboardHistoryData && dashboardHistoryData.length > 0 && (
+              <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
+                <Suspense fallback={null}>
+                  <PacingChart historyData={dashboardHistoryData} />
+                </Suspense>
               </div>
-              <div className="dashboard-row">
-                <DifferenceTable title="Existing Shows Tickets Growth" data={differences.ticketsBooked} type="booked" />
-                <DifferenceTable title="Existing Shows Cancelled Tickets" data={differences.ticketsCancelled} type="cancelled" />
+            )}
+
+            {includeDifferences && differences && (
+              <div className="differences-container" style={{ marginTop: '40px' }}>
+                <h2 style={{ fontSize: '24px', marginBottom: '20px', borderBottom: '1px solid #334155', paddingBottom: '10px' }}>
+                  Difference Details ({diffMode === 'hourly' ? 'Since Previous Report' : 'Daily'})
+                </h2>
+                <div className="dashboard-row">
+                  <DifferenceTable title="New Shows Added" data={differences.addedShows} type="added" />
+                  <DifferenceTable title="Shows Cancelled/Removed" data={differences.removedShows} type="removed" />
+                </div>
+                <div className="dashboard-row">
+                  <DifferenceTable title="Existing Shows Tickets Growth" data={differences.ticketsBooked} type="booked" />
+                  <DifferenceTable title="Existing Shows Cancelled Tickets" data={differences.ticketsCancelled} type="cancelled" />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </Fragment>
 
           <div className="footer">
             @TheWkndCinema • Data from Fandango • Excluding blocked seats.
@@ -1039,12 +1041,12 @@ function App() {
 
   if (openingDashboard && selectedRegion) {
     return (
-      <div className="site-frame">
+      <>
         {siteHeader}
         <main className="site-main dashboard-loading">
           <LoadingState label={`Loading ${regionTitle} data`} />
         </main>
-      </div>
+      </>
     );
   }
 

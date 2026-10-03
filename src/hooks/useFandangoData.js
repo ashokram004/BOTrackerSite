@@ -330,6 +330,13 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
       : refs.current.currentData;
 
     const isIndia = String(region).toLowerCase() === 'india';
+    const currentDiffMode = diffMode;
+
+    if (
+      !isIndia &&
+      !isHistoricalAdvance &&
+      !(currentDiffMode === 'hourly' ? refs.current.hourlySnapshotReady : refs.current.dailySnapshotReady)
+    ) return;
 
     if (!isIndia && !currentData) return;
 
@@ -432,7 +439,6 @@ export const useFandangoData = (diffModeOrOptions = 'daily', maybeOptions = {}) 
     const safeDailySnapshot = normalizeFirebasePayload(dailySnapshot || safeCurrentData);
     const safeHourlySnapshot = normalizeFirebasePayload(hourlySnapshot || safeCurrentData);
 
-    const currentDiffMode = diffMode;
     const selectedComparisonSnapshot = currentDiffMode === 'hourly' ? hourlySnapshot : dailySnapshot;
     const snapshotData = isHistoricalAdvance
       ? safeCurrentData
