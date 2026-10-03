@@ -6798,8 +6798,10 @@ html.theme-transitioning-to-dark::after {
 @media (max-width: 640px) {
   .dashboard-page .dashboard-header-actions {
     display: flex !important;
+    flex-direction: row !important;
     flex-wrap: nowrap;
     align-items: flex-end;
+    justify-content: flex-start;
     gap: 4px !important;
     width: 100%;
     min-width: 0;
