@@ -80,7 +80,7 @@ export const HistoryTable = memo(({ data, currency = 'USD', showGrowth = true })
                 <td style={{ textAlign: 'left', color: 'var(--text-muted)' }}>
                   {formatToIst(r.timestamp)}
                 </td>
-                <td className="gross-val">{formatCurrency(r.total_gross ?? r.totalGross ?? r.booked_gross ?? r.bookedGross ?? 0, currency)}</td>
+                <td className="gross-val" style={{ textAlign: 'right' }}>{formatCurrency(r.total_gross ?? r.totalGross ?? r.booked_gross ?? r.bookedGross ?? 0, currency)}</td>
                 <td>{parseNumber(r.booked_tickets ?? r.bookedTickets ?? 0).toLocaleString()}</td>
                 <td>{parseNumber(r.venues ?? 0).toLocaleString()}</td>
                 <td>{parseNumber(r.shows ?? 0).toLocaleString()}</td>
@@ -88,7 +88,7 @@ export const HistoryTable = memo(({ data, currency = 'USD', showGrowth = true })
                   {parseNumber(r.occupancy ?? 0).toFixed(1)}%
                 </td>
                 {showGrowth && (
-                  <td style={{ color: parseNumber(r.growth ?? 0) > 0 ? '#4ade80' : parseNumber(r.growth ?? 0) < 0 ? '#f87171' : 'inherit', fontWeight: 'bold' }}>
+                  <td style={{ color: parseNumber(r.growth ?? 0) > 0 ? '#4ade80' : parseNumber(r.growth ?? 0) < 0 ? '#f87171' : 'inherit', fontWeight: 'bold', textAlign: 'right' }}>
                     {parseNumber(r.growth ?? 0) > 0 ? '+' : ''}{formatCurrency(r.growth ?? 0, currency)}
                   </td>
                 )}

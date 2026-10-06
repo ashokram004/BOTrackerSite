@@ -1366,6 +1366,16 @@ tr:hover td {
     padding: 18px 12px 32px;
   }
 
+  .india-dashboard-page .summary-section > .table-scroll:not(:has(.india-territory-table)):not(.table-scroll-ledger):not(.table-scroll-theatres) table th:first-child,
+  .india-dashboard-page .summary-section > .table-scroll:not(:has(.india-territory-table)):not(.table-scroll-ledger):not(.table-scroll-theatres) table td:first-child {
+    width: 28% !important;
+  }
+
+  .india-dashboard-page .summary-section > .table-scroll:not(:has(.india-territory-table)) table th:last-child,
+  .india-dashboard-page .summary-section > .table-scroll:not(:has(.india-territory-table)) table td:last-child {
+    width: 15%;
+  }
+
   .india-territory-table {
     table-layout: fixed;
   }
@@ -2016,6 +2026,11 @@ tr:hover td {
     overflow-wrap: anywhere;
   }
 
+  .us-summary-table:not(.us-summary-table--without-growth) .table-scroll-us th:first-child,
+  .us-summary-table:not(.us-summary-table--without-growth) .table-scroll-us td:first-child {
+    width: 32%;
+  }
+
   .table-scroll-us th:nth-child(2),
   .table-scroll-us td:nth-child(2),
   .table-scroll-us th:nth-child(3),
@@ -2032,6 +2047,11 @@ tr:hover td {
   .table-scroll-us td:nth-child(6) {
     width: 15%;
     max-width: none;
+  }
+
+  .us-summary-table:not(.us-summary-table--without-growth) .table-scroll-us th:nth-child(4),
+  .us-summary-table:not(.us-summary-table--without-growth) .table-scroll-us td:nth-child(4) {
+    width: 20%;
   }
 
   th,
@@ -2056,6 +2076,112 @@ tr:hover td {
     width: max-content;
     table-layout: auto;
   }
+
+  .india-dashboard-page .table-scroll-ledger,
+  .india-dashboard-page .table-scroll-theatres {
+    overflow-x: auto !important;
+  }
+
+  .india-dashboard-page .table-scroll-ledger table {
+    width: 782px;
+    min-width: 782px;
+    table-layout: fixed;
+  }
+
+  .india-dashboard-page .table-scroll-ledger th,
+  .india-dashboard-page .table-scroll-ledger td {
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .india-dashboard-page .table-scroll-ledger th:nth-child(1),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(1) { width: 75px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(2),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(2) { width: 82px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(3),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(3) { width: 155px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(4),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(4) { width: 82px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(5),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(5) { width: 65px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(6),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(6) { width: 90px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(7),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(7) { width: 90px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(8),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(8) { width: 78px; }
+  .india-dashboard-page .table-scroll-ledger th:nth-child(9),
+  .india-dashboard-page .table-scroll-ledger td:nth-child(9) { width: 65px; }
+
+  .india-dashboard-page .table-scroll-theatres table {
+    width: 600px;
+    min-width: 600px;
+    table-layout: fixed;
+  }
+
+  .india-dashboard-page .table-scroll-theatres th,
+  .india-dashboard-page .table-scroll-theatres td {
+    max-width: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .india-dashboard-page .table-scroll-theatres th:nth-child(1),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(1) { width: 75px; }
+  .india-dashboard-page .table-scroll-theatres th:nth-child(2),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(2) { width: 90px; }
+  .india-dashboard-page .table-scroll-theatres th:nth-child(3),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(3) { width: 155px; }
+  .india-dashboard-page .table-scroll-theatres th:nth-child(4),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(4) { width: 55px; }
+  .india-dashboard-page .table-scroll-theatres th:nth-child(5),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(5) { width: 80px; }
+  .india-dashboard-page .table-scroll-theatres th:nth-child(6),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(6) { width: 85px; }
+  .india-dashboard-page .table-scroll-theatres th:nth-child(7),
+  .india-dashboard-page .table-scroll-theatres td:nth-child(7) { width: 60px; }
+  .usa-dashboard-page .table-scroll-shows {
+    overflow-x: auto !important;
+  }
+
+  .usa-dashboard-page .table-scroll-shows table {
+    width: 1120px;
+    min-width: 1120px;
+    table-layout: fixed;
+  }
+
+  .usa-dashboard-page .table-scroll-shows th,
+  .usa-dashboard-page .table-scroll-shows td {
+    max-width: none;
+    padding: 9px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .usa-dashboard-page .table-scroll-shows th:nth-child(1),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(1) { width: 6%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(2),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(2) { width: 9%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(3),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(3) { width: 10%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(4),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(4) { width: 22%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(5),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(5) { width: 9%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(6),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(6) { width: 12%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(7),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(7) { width: 10%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(8),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(8) { width: 7%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(9),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(9) { width: 7%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(10),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(10) { width: 5%; }
+  .usa-dashboard-page .table-scroll-shows th:nth-child(11),
+  .usa-dashboard-page .table-scroll-shows td:nth-child(11) { width: 5%; }
 
   .table-scroll-wide th,
   .table-scroll-wide td {
@@ -5122,22 +5248,18 @@ tr:hover td {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .usa-dashboard-page .table-scroll,
-  .usa-dashboard-page .table-scroll-wide {
+  .usa-dashboard-page .table-scroll:not(.table-scroll-wide) {
     overflow-x: hidden !important;
   }
 
-  .usa-dashboard-page .table-scroll table,
-  .usa-dashboard-page .table-scroll-wide table {
+  .usa-dashboard-page .table-scroll:not(.table-scroll-wide) table {
     width: 100%;
     min-width: 0;
     table-layout: fixed;
   }
 
-  .usa-dashboard-page .table-scroll th,
-  .usa-dashboard-page .table-scroll td,
-  .usa-dashboard-page .table-scroll-wide th,
-  .usa-dashboard-page .table-scroll-wide td {
+  .usa-dashboard-page .table-scroll:not(.table-scroll-wide) th,
+  .usa-dashboard-page .table-scroll:not(.table-scroll-wide) td {
     max-width: 0;
     padding: 8px 5px;
     white-space: normal;
@@ -5145,6 +5267,48 @@ tr:hover td {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  .usa-dashboard-page .table-scroll-wide {
+    overflow-x: auto !important;
+  }
+
+  .usa-dashboard-page .table-scroll-wide table {
+    width: 1120px;
+    min-width: 1120px;
+    table-layout: fixed;
+  }
+
+  .usa-dashboard-page .table-scroll-wide th,
+  .usa-dashboard-page .table-scroll-wide td {
+    max-width: none;
+    padding: 9px 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .usa-dashboard-page .table-scroll-wide th:nth-child(1),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(1) { width: 6%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(2),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(2) { width: 9%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(3),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(3) { width: 10%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(4),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(4) { width: 22%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(5),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(5) { width: 9%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(6),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(6) { width: 12%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(7),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(7) { width: 10%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(8),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(8) { width: 7%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(9),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(9) { width: 7%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(10),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(10) { width: 5%; }
+  .usa-dashboard-page .table-scroll-wide th:nth-child(11),
+  .usa-dashboard-page .table-scroll-wide td:nth-child(11) { width: 5%; }
 }
 
 .site-main {
@@ -6518,6 +6682,16 @@ tr:hover td {
   .us-summary-table--without-growth .table-scroll-us td:nth-child(n + 2) {
     width: 15%;
   }
+
+  .us-summary-table--without-growth .table-scroll-us th:first-child,
+  .us-summary-table--without-growth .table-scroll-us td:first-child {
+    width: 33%;
+  }
+
+  .us-summary-table--without-growth .table-scroll-us th:nth-child(4),
+  .us-summary-table--without-growth .table-scroll-us td:nth-child(4) {
+    width: 22%;
+  }
 }
 
 :root[data-theme='light'] .dashboard-header-right-actions > .dashboard-action-btn.dashboard-action-btn--neutral-inactive-hover[aria-pressed='false']:hover {
@@ -6777,6 +6951,10 @@ html.theme-transitioning-to-dark::after {
   padding-right: 14px;
 }
 
+.us-summary-table .table-scroll-us tbody td:nth-child(4) {
+  text-align: right !important;
+}
+
 .dashboard-page .us-summary-table.summary-section > h2 {
   padding-left: 14px;
 }
@@ -6786,6 +6964,12 @@ html.theme-transitioning-to-dark::after {
   .us-summary-table .table-scroll-us td {
     padding-left: 8px;
     padding-right: 8px;
+  }
+
+  .us-summary-table .table-scroll-us tbody td.gross-val {
+    text-align: right !important;
+    white-space: nowrap !important;
+    overflow-wrap: normal !important;
   }
 
   .dashboard-page .us-summary-table.summary-section > h2 {

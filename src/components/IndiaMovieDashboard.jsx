@@ -932,7 +932,7 @@ export const IndiaMovieDashboard = memo(({
   );
 
   return (
-    <main className="site-main dashboard-page">
+    <main className="site-main dashboard-page india-dashboard-page">
       <div className="container">
         <DashboardHeader
           marketLabel="INDIA BOX OFFICE"

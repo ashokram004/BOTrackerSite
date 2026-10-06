@@ -63,7 +63,7 @@ export const DataTable = memo(({ title, data, isFormat, isLanguage, isState, isT
                   </td>
                   <td>{formatNumber(row.shows)}</td>
                   <td>{formatNumber(row.booked)}</td>
-                  <td className="gross-val">{formatCurrency(row.gross)}</td>
+                  <td className="gross-val" style={{ textAlign: 'right' }}>{formatCurrency(row.gross)}</td>
                   <td style={{ color: getOccupancyColor(row.occ) }}>
                     {Number(row.occ).toFixed(1)}%
                   </td>

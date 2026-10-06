@@ -57,7 +57,7 @@ export const DifferenceTable = memo(({ title, data, type }) => {
                       {formatNumber(row.booked !== undefined ? row.booked : row['Booked'])}
                     </td>
                   )}
-                  {isShowChange && <td className="gross-val">{formatCurrency(row.gross !== undefined ? row.gross : row['Gross ($)'])}</td>}
+                  {isShowChange && <td className="gross-val" style={{ textAlign: 'right' }}>{formatCurrency(row.gross !== undefined ? row.gross : row['Gross ($)'])}</td>}
                   
                   {/* Columns for Ticket Variations (Tickets & Gross Deltas) */}
                   {isTicketChange && (
@@ -65,7 +65,7 @@ export const DifferenceTable = memo(({ title, data, type }) => {
                       <td style={{ color: changeColor, fontWeight: 'bold' }}>
                         {changeSign}{formatNumber(row.diffBooked)}
                       </td>
-                      <td style={{ color: changeColor, fontWeight: 'bold' }}>
+                      <td style={{ color: changeColor, fontWeight: 'bold', textAlign: 'right' }}>
                         {changeSign}{formatCurrency(row.diffGross)}
                       </td>
                     </>
