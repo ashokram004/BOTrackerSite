@@ -6,6 +6,8 @@ const formatCurrency = (val) => {
 
 const formatNumber = (val) => Number(val).toLocaleString();
 
+const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
+
 export const DifferenceTable = memo(({ title, data, type }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 20;
@@ -44,7 +46,7 @@ export const DifferenceTable = memo(({ title, data, type }) => {
 
               return (
                 <tr key={i}>
-                  <td className="theater-col">{row.theater || row['Theater Name']}</td>
+                  <td className="theater-col">{removeTheaterCityPrefix(row.theater || row['Theater Name'])}</td>
                   <td>{row.time || row['Show Time']}</td>
                   <td>{row.format || row['Format']}</td>
                   <td>{row.language || row['Language']}</td>

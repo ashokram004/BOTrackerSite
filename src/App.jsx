@@ -40,6 +40,35 @@ const REGION_META = {
   }
 };
 
+const MovieShelfTabs = ({ activeShelf, onShelfChange, counts }) => {
+  const { containerRef, indicatorStyle } = useSlidingIndicator(
+    '.movie-list-tab.active',
+    activeShelf
+  );
+  const shelves = [
+    { id: 'coming_soon', label: 'Coming soon', count: counts.comingSoon },
+    { id: 'now_playing', label: 'Now playing', count: counts.nowPlaying },
+    { id: 'ended', label: 'Archive', count: counts.archive }
+  ];
+
+  return (
+    <div ref={containerRef} className="movie-list-tabs" role="group" aria-label="Movie lifecycle">
+      <span className="movie-list-tabs-indicator" aria-hidden="true" style={indicatorStyle} />
+      {shelves.map((shelf) => (
+        <button
+          key={shelf.id}
+          type="button"
+          className={`movie-list-tab ${activeShelf === shelf.id ? 'active' : ''}`}
+          aria-pressed={activeShelf === shelf.id}
+          onClick={() => onShelfChange(shelf.id)}
+        >
+          {shelf.label} <span>{shelf.count}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegion }) => {
   const { containerRef: navRef, indicatorStyle: navIndicatorStyle } = useSlidingIndicator(
     '.site-nav button.active',
@@ -931,7 +960,7 @@ function App() {
             </span>
           </div>
         )}
-        <main key={`report-${selectedRegion}-${selectedMovieId}`} className="site-main dashboard-page">
+        <main key={`report-${selectedRegion}-${selectedMovieId}`} className="site-main dashboard-page usa-dashboard-page">
         <div className="container">
           <DashboardHeader
             marketLabel={`${REGION_META[selectedRegion]?.label} BOX OFFICE`}
@@ -1150,23 +1179,15 @@ function App() {
           ) : (
             <>
               <div className="movie-toolbar">
-                <div className="movie-list-tabs" role="group" aria-label="Movie lifecycle">
-                  {[
-                    { id: 'coming_soon', label: 'Coming soon', count: comingSoonMovies.length },
-                    { id: 'now_playing', label: 'Now playing', count: currentMovies.length },
-                    { id: 'ended', label: 'Archive', count: oldMovies.length }
-                  ].map((shelf) => (
-                    <button
-                      key={shelf.id}
-                      type="button"
-                      className={`movie-list-tab ${activeMovieShelf === shelf.id ? 'active' : ''}`}
-                      aria-pressed={activeMovieShelf === shelf.id}
-                      onClick={() => setMovieShelf(shelf.id)}
-                    >
-                      {shelf.label} <span>{shelf.count}</span>
-                    </button>
-                  ))}
-                </div>
+                <MovieShelfTabs
+                  activeShelf={activeMovieShelf}
+                  onShelfChange={setMovieShelf}
+                  counts={{
+                    comingSoon: comingSoonMovies.length,
+                    nowPlaying: currentMovies.length,
+                    archive: oldMovies.length
+                  }}
+                />
                 <label className="movie-search">
                   <span aria-hidden="true">⌕</span>
                   <input

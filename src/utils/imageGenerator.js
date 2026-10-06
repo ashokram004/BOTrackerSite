@@ -12,6 +12,7 @@ export const generateImageReport = async (
     // Colors
     const TEXT_BRIGHT = '#FFFFFF';
     const TEXT = '#E8E8F0';
+    const TEXT_SUBTLE = '#D6D6DE';
     const MUTED = '#A0A0B4';
     const GREEN = '#4ade80';
     const RED = '#f87171';
@@ -248,7 +249,11 @@ export const generateImageReport = async (
           const finalCx = c.align === 'left' ? x + c.pos : x + w - c.pos;
           
           let val = row[c.key];
-          let color = c.key === 'gross' ? ACCENT : TEXT;
+          let color = c.key === 'gross'
+            ? TEXT_BRIGHT
+            : c.key === 'name'
+              ? TEXT
+              : TEXT_SUBTLE;
           let fontStr = 'bold 28px Arial, Helvetica, sans-serif';
 
           // Formatting logic
@@ -356,6 +361,7 @@ export const generateIndiaImageReport = async ({
     const COLORS = {
       bright: '#FFFFFF',
       text: '#E8E8F0',
+      subtle: '#D6D6DE',
       muted: '#A0A0B4',
       green: '#4ade80',
       orange: '#fb923c',
@@ -566,9 +572,9 @@ export const generateIndiaImageReport = async ({
           ctx.textAlign = align;
           const occupancy = Number.parseFloat(row.occ);
           ctx.fillStyle = columnIndex === 0
-            ? (accent ? COLORS.accent : COLORS.bright)
+            ? COLORS.subtle
             : columnIndex === 2
-              ? COLORS.accent
+              ? COLORS.bright
               : columnIndex === 1
                 ? occupancy >= 80
                   ? COLORS.green
@@ -577,7 +583,7 @@ export const generateIndiaImageReport = async ({
                     : occupancy >= 30
                       ? COLORS.orange
                       : COLORS.red
-              : COLORS.text;
+              : COLORS.subtle;
           ctx.fillText(values[columnIndex], align === 'left' ? x + position : x + width - position, cy);
         });
         ctx.beginPath();
