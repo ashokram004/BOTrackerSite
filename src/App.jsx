@@ -761,7 +761,11 @@ function App() {
     setIsGeneratingImg(true);
     try {
       const { generateImageReport } = await import('./utils/imageGenerator');
-      const dataUrl = await generateImageReport(kpis, tables, metadata, selectedMovie?.name);
+      const dataUrl = await generateImageReport(kpis, tables, metadata, selectedMovie?.name, {
+        showGrowth: showUsGrowth && growthAvailable && metadata?.growthEnabled === true,
+        diffMode,
+        salesMode: salesView
+      });
       const a = document.createElement('a');
       a.href = dataUrl;
       const filePart = (value) => String(value || 'unknown').replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');

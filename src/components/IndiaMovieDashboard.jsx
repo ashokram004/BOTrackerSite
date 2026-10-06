@@ -720,9 +720,33 @@ export const IndiaMovieDashboard = memo(({
 
     setIsGeneratingImage(true);
     try {
+      await new Promise((resolve) => {
+        window.requestAnimationFrame(() => window.setTimeout(resolve, 0));
+      });
+
+      const growthValueFor = (label) => {
+        const card = summaryCards.find((item) => item.label === label);
+        if (!card || card.growth === null || card.growth === undefined || card.growth === 0) return '';
+
+        const value = card.growthFormat === 'currency'
+          ? formatRupee(Math.abs(card.growth))
+          : card.growthFormat === 'percentage-points'
+            ? `${Math.abs(card.growth).toFixed(1)} pp`
+            : formatNumber(Math.abs(card.growth));
+        return `${card.growth > 0 ? '+' : '-'}${value}`;
+      };
       const dataUrl = await generateIndiaImageReport({
         movieName,
         showDate,
+        salesView,
+        showGrowth: showGrowth && hasGrowthData,
+        growthSince,
+        growthValues: {
+          totalGross: growthValueFor('Total Gross'),
+          totalBooked: growthValueFor('Tickets Sold'),
+          totalShows: growthValueFor('Total Shows'),
+          totalVenues: growthValueFor('Total Venues')
+        },
         lastUpdated,
         totalGross,
         totalBooked,

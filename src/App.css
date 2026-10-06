@@ -5052,6 +5052,16 @@ tr:hover td {
 }
 
 @media (min-width: 781px) {
+  .us-summary-table--without-growth .table-scroll-us th:first-child,
+  .us-summary-table--without-growth .table-scroll-us td:first-child {
+    width: 52%;
+  }
+
+  .us-summary-table--without-growth .table-scroll-us th:not(:first-child),
+  .us-summary-table--without-growth .table-scroll-us td:not(:first-child) {
+    width: 12%;
+  }
+
   .table-scroll-us,
   .table-scroll-difference {
     overflow-x: auto;
@@ -6446,12 +6456,12 @@ tr:hover td {
 
   .us-summary-table--without-growth .table-scroll-us th:first-child,
   .us-summary-table--without-growth .table-scroll-us td:first-child {
-    width: 36%;
+    width: 40%;
   }
 
   .us-summary-table--without-growth .table-scroll-us th:nth-child(n + 2),
   .us-summary-table--without-growth .table-scroll-us td:nth-child(n + 2) {
-    width: 16%;
+    width: 15%;
   }
 }
 

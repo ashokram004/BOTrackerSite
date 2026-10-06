@@ -1,4 +1,10 @@
-export const generateImageReport = async (kpis, tables, metadata, movieName) => {
+export const generateImageReport = async (
+  kpis,
+  tables,
+  metadata,
+  movieName,
+  { showGrowth = true, diffMode = 'daily', salesMode = 'total' } = {}
+) => {
   return new Promise((resolve) => {
     const W = 2560;
     const PAD = 80;
@@ -115,13 +121,19 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
 
     ctx.fillStyle = ACCENT;
     ctx.font = '28px Arial, Helvetica, sans-serif';
-    ctx.fillText(`USA Advance Sales • Show Date: ${metadata.showDate}`, PAD, PAD + 85);
+    ctx.fillText(`USA ${salesMode === 'advance' ? 'Advance' : 'Current'} Sales • Show Date: ${metadata.showDate}`, PAD, PAD + 85);
 
     ctx.textAlign = 'right';
     ctx.fillStyle = TEXT;
     ctx.fillText(`Report: ${metadata.lastUpdated} IST`, W - PAD, PAD + 20);
-    ctx.fillStyle = MUTED;
-    ctx.fillText(`Last tracked: ${metadata.growthSince || 'N/A'} IST`, W - PAD, PAD + 65);
+    if (showGrowth) {
+      ctx.fillStyle = MUTED;
+      ctx.fillText(
+        `${diffMode === 'hourly' ? 'Since previous report' : 'Since daily report'}: ${metadata.growthSince || 'N/A'} IST`,
+        W - PAD,
+        PAD + 65
+      );
+    }
 
     // Separator line
     ctx.beginPath();
@@ -174,10 +186,10 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
     const d_venues_str = kpis.totalVenues.delta === 0 ? "" : (kpis.totalVenues.delta > 0 ? `+${kpis.totalVenues.delta}` : `${kpis.totalVenues.delta}`);
     const d_shows_str = kpis.totalShows.delta === 0 ? "" : (kpis.totalShows.delta > 0 ? `+${kpis.totalShows.delta}` : `${kpis.totalShows.delta}`);
 
-    drawKpi(0, "Total Gross", formatCurrency(kpis.totalGross.val), d_gross_str);
-    drawKpi(1, "Tickets Sold", kpis.totalBooked.val.toLocaleString(), d_tix_str);
-    drawKpi(2, "Total Venues", kpis.totalVenues.val.toLocaleString(), d_venues_str);
-    drawKpi(3, "Total Shows", kpis.totalShows.val.toLocaleString(), d_shows_str);
+    drawKpi(0, "Total Gross", formatCurrency(kpis.totalGross.val), showGrowth ? d_gross_str : '', showGrowth);
+    drawKpi(1, "Tickets Sold", kpis.totalBooked.val.toLocaleString(), showGrowth ? d_tix_str : '', showGrowth);
+    drawKpi(2, "Total Venues", kpis.totalVenues.val.toLocaleString(), showGrowth ? d_venues_str : '', showGrowth);
+    drawKpi(3, "Total Shows", kpis.totalShows.val.toLocaleString(), showGrowth ? d_shows_str : '', showGrowth);
     drawKpi(4, "Occupancy", `${kpis.occupancy.val.toFixed(1)}%`, `${kpis.occupancy.capacity?.toLocaleString() || 0} seats`, false);
 
     // --- TABLE DRAW UTILITY ---
@@ -206,6 +218,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
       cols.forEach(c => {
         ctx.textAlign = c.align;
         const cx = c.align === 'left' ? x + c.pos : x + w - c.pos;
+        ctx.fillStyle = TEXT_BRIGHT;
         ctx.fillText(c.name.toUpperCase(), cx, th_y + 15);
       });
 
@@ -235,7 +248,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
           const finalCx = c.align === 'left' ? x + c.pos : x + w - c.pos;
           
           let val = row[c.key];
-          let color = TEXT;
+          let color = c.key === 'gross' ? ACCENT : TEXT;
           let fontStr = 'bold 28px Arial, Helvetica, sans-serif';
 
           // Formatting logic
@@ -255,7 +268,7 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
 
           if (c.key === 'name') {
             if (isTheater) val = removeTheaterCityPrefix(val);
-            const nameLimit = isTheater ? 30 : 32;
+            const nameLimit = isTheater ? (showGrowth ? 30 : 38) : 32;
             if (val.length > nameLimit) val = val.substring(0, nameLimit - 3) + "...";
           } else if (c.key === 'dgross') {
             if (val === "") color = MUTED;
@@ -284,11 +297,11 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
     
     const standardCols = [
       { name: 'Name', key: 'name', pos: 40, align: 'left' },
-      { name: 'Shows', key: 'shows', pos: 600, align: 'right' },
-      { name: 'Tickets', key: 'booked', pos: 450, align: 'right' },
-      { name: 'Gross', key: 'gross', pos: 300, align: 'right' },
-      { name: 'Occ %', key: 'occ', pos: 180, align: 'right' },
-      { name: 'Δ Gross', key: 'dgross', pos: 40, align: 'right' }
+      { name: 'Shows', key: 'shows', pos: showGrowth ? 600 : 480, align: 'right' },
+      { name: 'Tickets', key: 'booked', pos: showGrowth ? 450 : 330, align: 'right' },
+      { name: 'Gross', key: 'gross', pos: showGrowth ? 300 : 180, align: 'right' },
+      { name: 'Occ %', key: 'occ', pos: showGrowth ? 180 : 40, align: 'right' },
+      ...(showGrowth ? [{ name: 'Δ Gross', key: 'dgross', pos: 40, align: 'right' }] : [])
     ];
 
     drawTable(PAD, r2_y, col_w, fl_h, "Format Breakdown", standardCols, tables.formats, true, false);
@@ -319,6 +332,10 @@ export const generateImageReport = async (kpis, tables, metadata, movieName) => 
 export const generateIndiaImageReport = async ({
   movieName = 'Movie',
   showDate = 'N/A',
+  salesView = 'total',
+  showGrowth = false,
+  growthValues = {},
+  growthSince = 'N/A',
   lastUpdated = 'N/A',
   totalGross = 0,
   totalBooked = 0,
@@ -462,10 +479,15 @@ export const generateIndiaImageReport = async ({
     ctx.fillText(movieName.toUpperCase(), PAD, PAD);
     ctx.fillStyle = COLORS.accent;
     ctx.font = '28px Arial, Helvetica, sans-serif';
-    ctx.fillText(`India Advance Sales • Show Date: ${showDate}`, PAD, PAD + 85);
+    ctx.fillText(`India ${salesView === 'advance' ? 'Advance' : 'Current'} Sales • Show Date: ${showDate}`, PAD, PAD + 85);
     ctx.textAlign = 'right';
     ctx.fillStyle = COLORS.text;
-    ctx.fillText(`Report: ${lastUpdated} IST`, W - PAD, PAD + 85);
+    ctx.fillText(`Report: ${lastUpdated} IST`, W - PAD, PAD + 20);
+    if (showGrowth) {
+      ctx.fillStyle = COLORS.muted;
+      ctx.font = '24px Arial, Helvetica, sans-serif';
+      ctx.fillText(`Growth Since: ${growthSince} IST`, W - PAD, PAD + 65);
+    }
     ctx.textAlign = 'left';
 
     ctx.beginPath();
@@ -477,8 +499,8 @@ export const generateIndiaImageReport = async ({
 
     const kpiY = PAD + 180;
     const kpiGap = 25;
-    const kpiWidth = (W - (2 * PAD) - (6 * kpiGap)) / 7;
-    const drawKpi = (index, label, value, subValue, color = COLORS.muted) => {
+    const kpiWidth = (W - (2 * PAD) - (5 * kpiGap)) / 6;
+    const drawKpi = (index, label, value, growthValue = '', color = COLORS.muted) => {
       const x = PAD + (index * (kpiWidth + kpiGap));
       drawGlassPanel(x, kpiY, kpiWidth, 180, 16);
       ctx.fillStyle = 'rgba(245, 131, 32, 0.78)';
@@ -486,25 +508,32 @@ export const generateIndiaImageReport = async ({
       ctx.textAlign = 'left';
       ctx.fillStyle = COLORS.muted;
       ctx.font = 'bold 20px Arial, Helvetica, sans-serif';
-      ctx.fillText(label.toUpperCase(), x + 35, kpiY + 20);
+      ctx.fillText(label.toUpperCase(), x + 35, kpiY + 30);
       ctx.textAlign = 'right';
-      ctx.fillStyle = color;
+      ctx.fillStyle = growthValue.startsWith('+')
+        ? COLORS.green
+        : growthValue.startsWith('-')
+          ? COLORS.red
+          : color;
       ctx.font = 'bold 22px Arial, Helvetica, sans-serif';
-      ctx.fillText(String(subValue), x + kpiWidth - 25, kpiY + 23);
+      ctx.fillText(growthValue, x + kpiWidth - 25, kpiY + 33);
       ctx.textAlign = 'left';
       ctx.fillStyle = COLORS.bright;
-      ctx.font = 'bold 58px Arial, Helvetica, sans-serif';
-      ctx.fillText(String(value), x + 35, kpiY + 65);
+      ctx.font = 'bold 68px Arial, Helvetica, sans-serif';
+      ctx.fillText(String(value), x + 35, kpiY + 75);
     };
 
     const occupancyColor = occupancy >= 60 ? COLORS.green : occupancy >= 40 ? COLORS.orange : COLORS.red;
-    drawKpi(0, 'Total Gross', formatINR(totalGross), '');
-    drawKpi(1, 'Tickets Sold', formatNumberINR(totalBooked), formatNumberINR(totalTickets));
-    drawKpi(2, 'Total Venues', formatNumberINR(totalVenues), '');
-    drawKpi(3, 'Total Shows', formatNumberINR(totalShows), '');
+    drawKpi(0, 'Total Gross', formatINR(totalGross), showGrowth ? growthValues.totalGross || '' : '');
+    drawKpi(1, 'Tickets Sold', formatNumberINR(totalBooked), showGrowth ? growthValues.totalBooked || '' : '');
+    drawKpi(2, 'Total Venues', formatNumberINR(totalVenues), showGrowth ? growthValues.totalVenues || '' : '');
+    drawKpi(3, 'Total Shows', formatNumberINR(totalShows), showGrowth ? growthValues.totalShows || '' : '');
     drawKpi(4, 'Occupancy', `${Number(occupancy).toFixed(1)}%`, '', occupancyColor);
-    drawKpi(5, 'Housefulls', formatNumberINR(houseFullShows), '', COLORS.green);
-    drawKpi(6, 'Fast Fillings', formatNumberINR(fastFillingShows), '', COLORS.blue);
+    drawKpi(
+      5,
+      'Fast Fillings / House Fulls',
+      `${formatNumberINR(fastFillingShows)} / ${formatNumberINR(houseFullShows)}`
+    );
 
     const drawTable = (x, y, width, panelHeight, title, rows, accent = false) => {
       drawGlassPanel(x, y, width, panelHeight, 16);
@@ -518,7 +547,7 @@ export const generateIndiaImageReport = async ({
       ctx.fillStyle = COLORS.muted;
       ctx.font = 'bold 24px Arial, Helvetica, sans-serif';
       const columns = [
-        ['Metric Name', 35, 'left'],
+        ['Name', 35, 'left'],
         ['Occ %', 80, 'right'],
         ['Gross', 260, 'right'],
         ['Tickets', 480, 'right'],
@@ -526,6 +555,7 @@ export const generateIndiaImageReport = async ({
       ];
       columns.forEach(([name, position, align]) => {
         ctx.textAlign = align;
+        ctx.fillStyle = COLORS.bright;
         ctx.fillText(name.toUpperCase(), align === 'left' ? x + position : x + width - position, headerY + 15);
       });
       ctx.font = 'bold 28px Arial, Helvetica, sans-serif';
@@ -534,7 +564,20 @@ export const generateIndiaImageReport = async ({
         const values = [row.name, row.occ, row.gross, row.booked, row.shows];
         columns.forEach(([key, position, align], columnIndex) => {
           ctx.textAlign = align;
-          ctx.fillStyle = columnIndex === 0 ? (accent ? COLORS.accent : COLORS.bright) : COLORS.text;
+          const occupancy = Number.parseFloat(row.occ);
+          ctx.fillStyle = columnIndex === 0
+            ? (accent ? COLORS.accent : COLORS.bright)
+            : columnIndex === 2
+              ? COLORS.accent
+              : columnIndex === 1
+                ? occupancy >= 80
+                  ? COLORS.green
+                  : occupancy >= 50
+                    ? '#facc15'
+                    : occupancy >= 30
+                      ? COLORS.orange
+                      : COLORS.red
+              : COLORS.text;
           ctx.fillText(values[columnIndex], align === 'left' ? x + position : x + width - position, cy);
         });
         ctx.beginPath();
