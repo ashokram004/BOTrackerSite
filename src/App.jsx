@@ -1,5 +1,4 @@
-import { useFandangoData } from './hooks/useFandangoData';
-import { useIndiaMovieData } from './hooks/useIndiaMovieData';
+import { useAnalyticsV2 } from './hooks/useAnalyticsV2';
 import { KPIGrid } from './components/KPIGrid';
 import { DataTable } from './components/DataTable';
 import { ShowsTable } from './components/ShowsTable';
@@ -9,8 +8,7 @@ import { CUSTOM_TIME_RANGE, isTimeInRange } from './utils/timeFilter';
 import { DifferenceTable } from './components/DifferenceTable';
 import { DashboardHeader, DEFAULT_MOVIE_POSTER_URL } from './components/DashboardHeader';
 import { LoadingState } from './components/LoadingState';
-import { database, databaseUrl } from './firebaseConfig';
-import { get, ref } from 'firebase/database';
+import { databaseUrl } from './firebaseConfig';
 import './App.css';
 import { Fragment, lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,8 +16,8 @@ import { useSlidingIndicator } from './hooks/useSlidingIndicator';
 
 const EMPTY_ARRAY = [];
 
-const IndiaMovieDashboard = lazy(() =>
-  import('./components/IndiaMovieDashboard').then(({ IndiaMovieDashboard: Dashboard }) => ({
+const IndiaAnalyticsDashboard = lazy(() =>
+  import('./components/IndiaAnalyticsDashboard').then(({ IndiaAnalyticsDashboard: Dashboard }) => ({
     default: Dashboard
   }))
 );
@@ -122,14 +120,14 @@ const SiteHeader = ({ theme, onToggleTheme, onHome, onSelectRegion, selectedRegi
 const getMovieRootCandidates = (region) => {
   const normalized = String(region || '').toLowerCase();
   if (normalized === 'india') {
-    return ['markets/india/movies'];
+    return ['markets/india/movie_index'];
   }
-  return ['markets/usa/movies'];
+  return ['markets/usa/movie_index'];
 };
 
 const getMovieDatePathCandidates = (region, movieSlug) => {
-  const rootCandidates = getMovieRootCandidates(region);
-  return rootCandidates.map((root) => `${root}/${movieSlug}`);
+  const market = String(region || '').toLowerCase() === 'india' ? 'india' : 'usa';
+  return [`markets/${market}/movies/${movieSlug}/date_index`];
 };
 
 const prettifySlug = (value) =>
@@ -157,19 +155,15 @@ const getShallowPath = (path) => {
 
 const loadShallowKeys = async (path) => {
   const shallowPath = getShallowPath(path);
-  if (!shallowPath) return null;
+  if (!shallowPath) throw new Error('Firebase database URL is not configured.');
 
-  try {
-    const response = await fetch(shallowPath);
-    if (!response.ok) return null;
-    return response.json();
-  } catch (error) {
-    console.warn('Firebase shallow metadata unavailable; using SDK fallback.', error);
-    return null;
+  const response = await fetch(shallowPath);
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`Unable to load Firebase index (${response.status}): ${path}`);
   }
+  return response.json();
 };
-
-const hasKeys = (value) => value && typeof value === 'object' && Object.keys(value).length > 0;
 
 const getMarketToday = (region) => {
   const timeZone = region === 'india' ? 'Asia/Kolkata' : 'America/New_York';
@@ -257,13 +251,7 @@ const loadNodeWithRetry = async (roots, attempts = 4) => {
 
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      const shallow = await loadShallowKeys(roots[0]);
-      if (hasKeys(shallow)) return shallow;
-
-      const snapshots = await Promise.all(roots.map((rootPath) => get(ref(database, rootPath))));
-      const snapshot = snapshots.find((candidate) => candidate.exists());
-      if (snapshot) return snapshot.val() || {};
-      throw new Error(`Firebase path not found: ${roots[0]}`);
+      return (await loadShallowKeys(roots[0])) || {};
     } catch (error) {
       lastError = error;
       if (attempt < attempts - 1) await wait(500 * (attempt + 1));
@@ -293,12 +281,19 @@ function App() {
   const [dateError, setDateError] = useState(null);
   const [diffMode, setDiffMode] = useState('hourly');
   const [showUsGrowth, setShowUsGrowth] = useState(true);
+  const [showIndiaGrowth, setShowIndiaGrowth] = useState(true);
+  const [indiaGrossMode, setIndiaGrossMode] = useState('bms');
+  const [usDetailsContext, setUsDetailsContext] = useState('');
+  const [usTheatersContext, setUsTheatersContext] = useState('');
   const [salesModeState, setSalesModeState] = useState({
     movieId: routeMovie?.id || '',
     mode: 'advance'
   });
   const selectedMovieId = selectedMovie?.id || '';
   const selectedDateValue = selectedDate || '';
+  const dashboardContextKey = `${selectedRegion}/${selectedMovieId}/${selectedDateValue}/${salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'advance'}`;
+  const showUsDetails = usDetailsContext === dashboardContextKey;
+  const showUsTheaters = usTheatersContext === dashboardContextKey;
   const salesView = salesModeState.movieId === selectedMovieId ? salesModeState.mode : 'advance';
   const isHistoricalAdvance = salesView === 'advance'
     && Boolean(selectedDateValue)
@@ -523,24 +518,21 @@ function App() {
     movie.name.toLowerCase().includes(movieSearch.trim().toLowerCase())
   );
 
-  const dashboardData = useFandangoData({
+  const dashboardData = useAnalyticsV2({
     diffMode,
+    grossMode: indiaGrossMode,
     salesMode: salesView,
     region: selectedRegion || 'usa',
     movieSlug: selectedMovieId,
     showDate: selectedDateValue,
-    includeDifferences: selectedRegion === 'usa' && showUsGrowth && salesGrowthEnabled,
-    enabled: shouldFetchDashboard && selectedRegion !== 'india',
-    refreshKey: reloadKey
+    includeDifferences: selectedRegion === 'india'
+      ? showIndiaGrowth && salesGrowthEnabled
+      : showUsGrowth && salesGrowthEnabled,
+    enabled: shouldFetchDashboard,
+    refreshKey: selectedRegion === 'india' ? indiaRefreshKey : reloadKey
   });
 
-  const indiaDashboardData = useIndiaMovieData({
-    enabled: shouldFetchDashboard && selectedRegion === 'india',
-    movieSlug: selectedMovieId,
-    showDate: selectedDateValue,
-    refreshKey: indiaRefreshKey
-  });
-
+  const indiaDashboardData = dashboardData;
   const {
     loading,
     kpis,
@@ -550,23 +542,16 @@ function App() {
     rawRows,
     historyData,
     differences,
-    includeDifferences,
     lastLiveUpdate
-  } = selectedRegion === 'india' ? { loading: indiaDashboardData.loading, kpis: null, tables: null, metadata: { showDate: indiaDashboardData.showDate }, error: indiaDashboardData.error, rawRows: indiaDashboardData.rows, historyData: [], differences: null, includeDifferences: false } : dashboardData;
-  const growthAvailable = selectedRegion === 'india'
-    ? salesGrowthEnabled
-    : salesGrowthEnabled && metadata?.growthEnabled !== false;
+  } = dashboardData;
+  const includeDifferences = selectedRegion === 'india' ? showIndiaGrowth : showUsGrowth;
+  const growthAvailable = salesGrowthEnabled && metadata?.growthEnabled !== false;
   const dashboardHistoryData = growthAvailable ? historyData || EMPTY_ARRAY : EMPTY_ARRAY;
 
-  const dashboardIsCurrent = selectedRegion === 'india'
-    ? indiaDashboardData.movieName === selectedMovieId
-      && indiaDashboardData.showDate === selectedDateValue
-      && (!isHistoricalAdvance || (
-        indiaDashboardData.currentSnapshotReady
-        && indiaDashboardData.advanceSnapshotReady
-      ))
-    : metadata?.movieSlug === selectedMovieId && metadata?.showDate === selectedDateValue && metadata?.salesMode === salesView;
-  const dashboardLoading = loading || !dashboardIsCurrent;
+  const dashboardIsCurrent = metadata?.movieSlug === selectedMovieId
+    && metadata?.showDate === selectedDateValue
+    && metadata?.salesMode === salesView;
+  const dashboardLoading = loading || (!dashboardIsCurrent && !error);
   const openingDashboard = Boolean(
     selectedRegion &&
     selectedMovie &&
@@ -680,16 +665,6 @@ function App() {
     const sVenues = new Set();
     let sShows = 0;
     let validShows = 0;
-
-    const pickHighestGrossLanguage = () => {
-      const entries = Object.values(summary.languages);
-      if (!entries.length) return { id: 'Unknown', name: 'Unknown' };
-      return entries.reduce((best, current) => {
-        const currentGross = Number(current?.gross || 0);
-        const bestGross = Number(best?.gross || 0);
-        return currentGross > bestGross ? current : best;
-      }, entries[0]);
-    };
 
     filteredRows.forEach((r) => {
       const gross = Number(r.gross || 0);
@@ -911,12 +886,8 @@ function App() {
         <>
           {siteHeader}
           <Suspense fallback={<main className="site-main dashboard-loading"><LoadingState label="Loading India dashboard" /></main>}>
-            <IndiaMovieDashboard
-              rows={isHistoricalAdvance && indiaDashboardData.hasAdvanceSnapshot
-                ? indiaDashboardData.advanceRows || []
-                : indiaDashboardData.rows || []}
-              historyData={salesGrowthEnabled ? indiaDashboardData.historyData || [] : []}
-              growthEnabled={salesGrowthEnabled}
+            <IndiaAnalyticsDashboard
+              data={indiaDashboardData}
               salesView={salesView}
               movieName={selectedMovie?.name || prettifySlug(selectedMovieId)}
               showDate={selectedDateValue}
@@ -924,13 +895,22 @@ function App() {
               salesModeOptions={salesModeOptions}
               onSalesViewChange={handleSalesViewChange}
               onDateChange={handleDateChange}
-              lastUpdated={isHistoricalAdvance && indiaDashboardData.hasAdvanceSnapshot
-                ? indiaDashboardData.advanceLastUpdated || indiaDashboardData.lastUpdated || 'N/A'
-                : indiaDashboardData.lastUpdated || 'N/A'}
-              growthSince={salesGrowthEnabled ? indiaDashboardData.growthSince || 'N/A' : 'N/A'}
-              moviePosterUrl={indiaDashboardData.posterUrl}
               onChangeMovie={handleChangeMovie}
               onReload={handleIndiaReload}
+              growthVisible={showIndiaGrowth && growthAvailable}
+              onGrowthVisibleChange={setShowIndiaGrowth}
+              grossMode={indiaGrossMode}
+              onGrossModeChange={setIndiaGrossMode}
+              loadNextDetailPage={indiaDashboardData.loadNextDetailPage}
+              hasMoreDetails={indiaDashboardData.hasMoreDetails}
+              loadNextDimensionPage={indiaDashboardData.loadNextDimensionPage}
+              hasMoreDimensionRows={indiaDashboardData.hasMoreDimensionRows}
+              loadingDetails={indiaDashboardData.loadingDetails}
+              loadingDimension={indiaDashboardData.loadingDimension}
+              changeCounts={indiaDashboardData.changeCounts}
+              loadingChangeType={indiaDashboardData.loadingChangeType}
+              hasMoreChanges={indiaDashboardData.hasMoreChanges}
+              loadMoreChanges={indiaDashboardData.loadMoreChanges}
             />
           </Suspense>
         </>
@@ -1006,13 +986,48 @@ function App() {
             <KPIGrid kpis={displayedKpis} showGrowth={showUsGrowth && growthAvailable} />
 
             <div className="dashboard-row">
-              {displayedTables?.formats && <DataTable title="Format Breakdown" data={displayedTables.formats} isFormat showGrowth={showUsGrowth && growthAvailable} />}
-              {displayedTables?.languages && <DataTable title="Language Breakdown" data={displayedTables.languages} isLanguage showGrowth={showUsGrowth && growthAvailable} />}
+              {displayedTables?.formats && <DataTable
+                title="Format Breakdown"
+                data={displayedTables.formats}
+                isFormat
+                showGrowth={showUsGrowth && growthAvailable}
+                totalCount={dashboardData.dimensionCounts?.formats}
+                hasMore={dashboardData.hasMoreDimensionRows('formats')}
+                loadingMore={dashboardData.loadingDimension === 'formats'}
+                onLoadMore={() => dashboardData.loadNextDimensionPage('formats')}
+              />}
+              {displayedTables?.languages && <DataTable
+                title="Language Breakdown"
+                data={displayedTables.languages}
+                isLanguage
+                showGrowth={showUsGrowth && growthAvailable}
+                totalCount={dashboardData.dimensionCounts?.languages}
+                hasMore={dashboardData.hasMoreDimensionRows('languages')}
+                loadingMore={dashboardData.loadingDimension === 'languages'}
+                onLoadMore={() => dashboardData.loadNextDimensionPage('languages')}
+              />}
             </div>
 
             <div className="dashboard-row">
-              {displayedTables?.states && <DataTable title="State Breakdown" data={displayedTables.states} isState showGrowth={showUsGrowth && growthAvailable} />}
-              {displayedTables?.theaters && <DataTable title="Theatre Breakdown" data={displayedTables.theaters} isTheater showGrowth={showUsGrowth && growthAvailable} />}
+              {displayedTables?.states && <DataTable
+                title="State Breakdown"
+                data={displayedTables.states}
+                isState
+                showGrowth={showUsGrowth && growthAvailable}
+                totalCount={dashboardData.dimensionCounts?.states}
+                hasMore={dashboardData.hasMoreDimensionRows('states')}
+                loadingMore={dashboardData.loadingDimension === 'states'}
+                onLoadMore={() => dashboardData.loadNextDimensionPage('states')}
+              />}
+              <section className="summary-section">
+                <h2>Theatre-Level Breakdown</h2>
+                <p>Theatre rankings are available on demand.</p>
+                <button type="button" className="toggle-btn" onClick={() => setUsTheatersContext(
+                  showUsTheaters ? '' : dashboardContextKey
+                )}>
+                  {showUsTheaters ? 'Hide Theatres' : 'Show Theatre Breakdown'}
+                </button>
+              </section>
             </div>
 
             <div className="dashboard-row">
@@ -1020,17 +1035,64 @@ function App() {
                 title="Theatre Chain Breakdown"
                 data={displayedTables?.chains || []}
                 showGrowth={showUsGrowth && growthAvailable}
+                totalCount={dashboardData.dimensionCounts?.chains}
+                hasMore={dashboardData.hasMoreDimensionRows('chains')}
+                loadingMore={dashboardData.loadingDimension === 'chains'}
+                onLoadMore={() => dashboardData.loadNextDimensionPage('chains')}
               />
               <DataTable
                 title="Time of Day Breakdown"
                 data={displayedTables?.timeCats || []}
                 showGrowth={showUsGrowth && growthAvailable}
+                totalCount={dashboardData.dimensionCounts?.time_buckets}
+                hasMore={dashboardData.hasMoreDimensionRows('time_buckets')}
+                loadingMore={dashboardData.loadingDimension === 'time_buckets'}
+                onLoadMore={() => dashboardData.loadNextDimensionPage('time_buckets')}
               />
             </div>
 
-            <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
-              <ShowsTable rows={filteredRows} />
-            </div>
+            {showUsTheaters && (
+              <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
+                <DataTable
+                  title="Theatre Breakdown"
+                  data={displayedTables?.theaters || []}
+                  isTheater
+                  showGrowth={showUsGrowth && growthAvailable}
+                  totalCount={dashboardData.dimensionCounts?.theaters}
+                  hasMore={dashboardData.hasMoreDimensionRows('theaters')}
+                  loadingMore={dashboardData.loadingDimension === 'theaters'}
+                  onLoadMore={() => dashboardData.loadNextDimensionPage('theaters')}
+                />
+              </div>
+            )}
+
+            <section className="summary-section deep-dive-opt-in">
+              <h2>Show-Level Deep Dive</h2>
+              <p>Detailed show records are fetched only when requested, 20 at a time.</p>
+              {!showUsDetails && (
+                <button
+                  type="button"
+                  className="toggle-btn"
+                  disabled={!dashboardData.detailsAvailable || dashboardData.loadingDetails}
+                  onClick={() => {
+                    setUsDetailsContext(dashboardContextKey);
+                    dashboardData.loadNextDetailPage();
+                  }}
+                >
+                  {dashboardData.loadingDetails ? 'Loading first 20 shows...' : 'Load Show Details'}
+                </button>
+              )}
+            </section>
+            {showUsDetails && (
+              <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
+                <ShowsTable
+                  rows={filteredRows}
+                  hasMore={dashboardData.hasMoreDetails}
+                  loadingMore={dashboardData.loadingDetails}
+                  onLoadMore={dashboardData.loadNextDetailPage}
+                />
+              </div>
+            )}
 
             {dashboardHistoryData && dashboardHistoryData.length > 0 && (
               <div className="dashboard-row" style={{ gridTemplateColumns: '1fr' }}>
@@ -1052,12 +1114,48 @@ function App() {
                   Difference Details ({diffMode === 'hourly' ? 'Since Previous Report' : 'Daily'})
                 </h2>
                 <div className="dashboard-row">
-                  <DifferenceTable title="New Shows Added" data={differences.addedShows} type="added" />
-                  <DifferenceTable title="Shows Cancelled/Removed" data={differences.removedShows} type="removed" />
+                  <DifferenceTable
+                    title="New Shows Added"
+                    data={differences.addedShows}
+                    type="added"
+                    totalCount={dashboardData.changeCounts?.added}
+                    hasMore={dashboardData.hasMoreChanges('added')}
+                    loadingMore={dashboardData.loadingChangeType === 'added'}
+                    disabled={Boolean(dashboardData.loadingChangeType)}
+                    onLoadMore={() => dashboardData.loadMoreChanges('added')}
+                  />
+                  <DifferenceTable
+                    title="Shows Cancelled/Removed"
+                    data={differences.removedShows}
+                    type="removed"
+                    totalCount={dashboardData.changeCounts?.removed}
+                    hasMore={dashboardData.hasMoreChanges('removed')}
+                    loadingMore={dashboardData.loadingChangeType === 'removed'}
+                    disabled={Boolean(dashboardData.loadingChangeType)}
+                    onLoadMore={() => dashboardData.loadMoreChanges('removed')}
+                  />
                 </div>
                 <div className="dashboard-row">
-                  <DifferenceTable title="Existing Shows Tickets Growth" data={differences.ticketsBooked} type="booked" />
-                  <DifferenceTable title="Existing Shows Cancelled Tickets" data={differences.ticketsCancelled} type="cancelled" />
+                  <DifferenceTable
+                    title="Existing Shows Tickets Growth"
+                    data={differences.increasedShows}
+                    type="booked"
+                    totalCount={dashboardData.changeCounts?.tickets_increased}
+                    hasMore={dashboardData.hasMoreChanges('tickets_increased')}
+                    loadingMore={dashboardData.loadingChangeType === 'tickets_increased'}
+                    disabled={Boolean(dashboardData.loadingChangeType)}
+                    onLoadMore={() => dashboardData.loadMoreChanges('tickets_increased')}
+                  />
+                  <DifferenceTable
+                    title="Existing Shows Cancelled Tickets"
+                    data={differences.decreasedShows}
+                    type="cancelled"
+                    totalCount={dashboardData.changeCounts?.tickets_decreased}
+                    hasMore={dashboardData.hasMoreChanges('tickets_decreased')}
+                    loadingMore={dashboardData.loadingChangeType === 'tickets_decreased'}
+                    disabled={Boolean(dashboardData.loadingChangeType)}
+                    onLoadMore={() => dashboardData.loadMoreChanges('tickets_decreased')}
+                  />
                 </div>
               </div>
             )}

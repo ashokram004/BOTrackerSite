@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 // Bulletproof IST Time Extractor
 const getIstTimeInfo = (utcString) => {

@@ -44,12 +44,22 @@ const formatToIst = (timestamp) => {
   }
 };
 
-export const HistoryTable = memo(({ data, currency = 'USD', showGrowth = true }) => {
+export const HistoryTable = memo(({ data, currency = 'USD', showGrowth = true, grossMode }) => {
   const [showAll, setShowAll] = useState(false);
   const rowLimit = 10;
-  const sorted = useMemo(() => {
-    return [...(data || [])].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  }, [data]);
+  const sorted = useMemo(() => [...(data || [])]
+    .map((row) => {
+      const modeMetrics = grossMode ? row.gross_modes?.[grossMode] : null;
+      return modeMetrics ? {
+        ...row,
+        total_gross: modeMetrics.booked_gross,
+        booked_tickets: modeMetrics.booked_tickets,
+        venues: modeMetrics.theater_count,
+        shows: modeMetrics.show_count,
+        occupancy: modeMetrics.occupancy_rate
+      } : row;
+    })
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)), [data, grossMode]);
   const visibleRows = showAll ? sorted : sorted.slice(0, rowLimit);
 
   return (

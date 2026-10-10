@@ -8,15 +8,24 @@ const formatNumber = (val) => Number(val).toLocaleString();
 
 const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
-export const DifferenceTable = memo(({ title, data, type }) => {
-  const [showAll, setShowAll] = useState(false);
+export const DifferenceTable = memo(({
+  title,
+  data = [],
+  type,
+  totalCount = data.length,
+  hasMore = false,
+  loadingMore = false,
+  disabled = false,
+  onLoadMore
+}) => {
+  const [visibleLimit, setVisibleLimit] = useState(20);
   const rowLimit = 20;
 
   const visibleRows = useMemo(() => {
     if (!data) return [];
-    if (showAll || data.length <= rowLimit) return data;
-    return data.slice(0, rowLimit);
-  }, [data, showAll, rowLimit]);
+    return data.slice(0, visibleLimit);
+  }, [data, visibleLimit]);
+  const canShowMore = visibleRows.length < data.length || hasMore;
 
   // type can be 'added', 'removed', 'booked', 'cancelled'
   const isShowChange = type === 'added' || type === 'removed';
@@ -45,7 +54,7 @@ export const DifferenceTable = memo(({ title, data, type }) => {
               const changeSign = type === 'booked' ? '+' : '-';
 
               return (
-                <tr key={i}>
+                <tr key={row.id || i}>
                   <td className="theater-col">{removeTheaterCityPrefix(row.theater || row['Theater Name'])}</td>
                   <td>{row.time || row['Show Time']}</td>
                   <td>{row.format || row['Format']}</td>
@@ -91,15 +100,21 @@ export const DifferenceTable = memo(({ title, data, type }) => {
             )}
 
             {/* Pagination/Toggle Row */}
-            {data && data.length > rowLimit && (
+            {canShowMore && (
               <tr>
                 <td colSpan={6} style={{ textAlign: 'center', padding: '18px', borderBottom: 'none' }}>
                   <button
-                    onClick={() => setShowAll((prev) => !prev)}
+                    onClick={() => {
+                      if (visibleRows.length >= data.length && hasMore) onLoadMore?.();
+                      setVisibleLimit((previous) => previous + rowLimit);
+                    }}
+                    disabled={disabled || loadingMore}
                     className="toggle-btn"
                     style={{ width: 'auto', padding: '10px 18px' }}
                   >
-                    {showAll ? 'Show Top 20' : `Show Remaining ${data.length - rowLimit}`}
+                    {loadingMore
+                      ? 'Loading...'
+                      : `Load More (${Math.max(0, totalCount - visibleRows.length)} remaining)`}
                   </button>
                 </td>
               </tr>

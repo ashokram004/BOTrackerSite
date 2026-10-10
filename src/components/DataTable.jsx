@@ -1,15 +1,19 @@
 import { memo, useMemo, useState } from 'react';
 
-const formatCurrency = (val) => {
-  return `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+const formatCurrency = (val, currency = 'USD') => {
+  return new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0
+  }).format(Number(val));
 };
 
 const formatNumber = (val) => Number(val).toLocaleString();
 
-const formatDeltaValue = (val) => {
+const formatDeltaValue = (val, currency = 'USD') => {
   if (val === 0) return '';
   const sign = val > 0 ? '+' : '-';
-  return `${sign} $${Math.abs(val).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `${sign} ${formatCurrency(Math.abs(val), currency)}`;
 };
 
 const getOccupancyColor = (occ) => {
@@ -21,14 +25,25 @@ const getOccupancyColor = (occ) => {
 
 const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
-export const DataTable = memo(({ title, data, isFormat, isLanguage, isState, isTheater, showGrowth = true }) => {
-  const [showAll, setShowAll] = useState(false);
+export const DataTable = memo(({
+  title,
+  data = [],
+  isFormat,
+  isLanguage,
+  isState,
+  isTheater,
+  showGrowth = true,
+  currency = 'USD',
+  totalCount = data.length,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore
+}) => {
+  const [visibleLimit, setVisibleLimit] = useState(20);
   const rowLimit = 20;
 
-  const visibleRows = useMemo(() => {
-    if (showAll || data.length <= rowLimit) return data;
-    return data.slice(0, rowLimit);
-  }, [data, showAll, rowLimit]);
+  const visibleRows = useMemo(() => data.slice(0, visibleLimit), [data, visibleLimit]);
+  const canShowMore = visibleRows.length < data.length || hasMore;
 
   return (
     <div className={`summary-section us-summary-table${showGrowth ? '' : ' us-summary-table--without-growth'}`}>
@@ -63,13 +78,13 @@ export const DataTable = memo(({ title, data, isFormat, isLanguage, isState, isT
                   </td>
                   <td>{formatNumber(row.shows)}</td>
                   <td>{formatNumber(row.booked)}</td>
-                  <td className="gross-val" style={{ textAlign: 'right' }}>{formatCurrency(row.gross)}</td>
+                  <td className="gross-val" style={{ textAlign: 'right' }}>{formatCurrency(row.gross, currency)}</td>
                   <td style={{ color: getOccupancyColor(row.occ) }}>
                     {Number(row.occ).toFixed(1)}%
                   </td>
                   {showGrowth && (
                     <td style={{ color: growthColor }}>
-                      {formatDeltaValue(dGross)}
+                      {formatDeltaValue(dGross, currency)}
                     </td>
                   )}
                 </tr>
@@ -91,17 +106,23 @@ export const DataTable = memo(({ title, data, isFormat, isLanguage, isState, isT
               </tr>
             )}
 
-            {data.length > rowLimit && (
+            {canShowMore && (
 
               <tr>
 
                 <td colSpan={showGrowth ? 6 : 5} style={{ textAlign: 'center', padding: '18px', borderBottom: 'none' }}>
                   <button
-                    onClick={() => setShowAll((prev) => !prev)}
+                    onClick={() => {
+                      if (visibleRows.length >= data.length && hasMore) onLoadMore?.();
+                      setVisibleLimit((previous) => previous + rowLimit);
+                    }}
+                    disabled={loadingMore}
                     className="toggle-btn"
                     style={{ width: 'auto', padding: '10px 18px' }}
                   >
-                    {showAll ? 'Show Top 20' : `Show Remaining ${data.length - rowLimit}`}
+                    {loadingMore
+                      ? 'Loading...'
+                      : `Load More (${Math.max(0, totalCount - visibleRows.length)} remaining)`}
                   </button>
                 </td>
               </tr>

@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 
-const getGross = (snapshot) => {
-  const value = snapshot.total_gross
+const getGross = (snapshot, grossMode) => {
+  const value = snapshot.gross_modes?.[grossMode]?.booked_gross
+    ?? snapshot.total_gross
     ?? snapshot.totalGross
     ?? snapshot.booked_gross
     ?? snapshot.bookedGross;
@@ -34,7 +35,7 @@ const formatTimestamp = (value) => {
   }).replace(/\s(am|pm)/i, (match) => match.toUpperCase());
 };
 
-export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
+export const IndiaGrossGrowthChart = ({ historyData = [], grossMode = 'bms' }) => {
   const svgRef = useRef(null);
   const [hoveredIndex, setHoveredIndex] = useState(null);
 
@@ -44,7 +45,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
       .map((snapshot) => ({
         timestamp: snapshot.timestamp,
         time: new Date(snapshot.timestamp).getTime(),
-        gross: getGross(snapshot)
+        gross: getGross(snapshot, grossMode)
       }))
       .filter((snapshot) => Number.isFinite(snapshot.time) && snapshot.gross !== null)
       .sort((a, b) => a.time - b.time);
@@ -66,7 +67,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
       minimum: 0,
       maximum: maximumGross > 0 ? maximumGross : 1
     };
-  }, [historyData]);
+  }, [grossMode, historyData]);
 
   if (!chart) return null;
 
@@ -109,7 +110,7 @@ export const IndiaGrossGrowthChart = ({ historyData = [] }) => {
   return (
     <div className="summary-section india-gross-growth-chart" style={{ marginTop: '20px', padding: '20px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
-        <h2 style={{ margin: 0 }}>Total Gross Over Time</h2>
+        <h2 style={{ margin: 0 }}>Total Gross Over Time ({grossMode.toUpperCase()} mode)</h2>
         <span style={{ color: 'var(--text-muted)', fontSize: '11px', whiteSpace: 'nowrap' }}>
           {chart.points.length.toLocaleString()} runs
         </span>

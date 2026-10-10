@@ -20,10 +20,10 @@ const getOccupancyColor = (occ) => {
 
 const removeTheaterCityPrefix = (value) => String(value || '').replace(/^\s*\([^)]*\)\s*/, '');
 
-export const ShowsTable = memo(({ rows }) => {
+export const ShowsTable = memo(({ rows, hasMore = false, loadingMore = false, onLoadMore }) => {
   const [sortKey, setSortKey] = useState(null);
   const [sortDir, setSortDir] = useState('asc');
-  const [showAll, setShowAll] = useState(false);
+  const [visibleLimit, setVisibleLimit] = useState(20);
 
   const onSortKey = (key) => {
     if (sortKey === key) {
@@ -49,8 +49,8 @@ export const ShowsTable = memo(({ rows }) => {
     return copy;
   }, [rows, sortKey, sortDir]);
 
-  const rowLimit = 10;
-  const visibleRows = showAll ? sorted : sorted.slice(0, rowLimit);
+  const rowLimit = 20;
+  const visibleRows = sorted.slice(0, visibleLimit);
 
   const th = (key, label, align = 'left') => (
     <th
@@ -120,16 +120,18 @@ export const ShowsTable = memo(({ rows }) => {
         </table>
       </div>
 
-      {sorted.length > rowLimit && (
+      {(visibleRows.length < sorted.length || hasMore) && (
         <div style={{ textAlign: 'center', paddingTop: '16px' }}>
           <button
             type="button"
-            onClick={() => setShowAll((value) => !value)}
+            disabled={loadingMore}
+            onClick={() => {
+              if (visibleRows.length >= sorted.length && hasMore) onLoadMore?.();
+              setVisibleLimit((previous) => previous + rowLimit);
+            }}
             className="toggle-btn"
           >
-            {showAll
-              ? 'Show Top 10'
-              : `Show Remaining ${(sorted.length - rowLimit).toLocaleString()} Shows`}
+            {loadingMore ? 'Loading...' : 'Load Next 20 Shows'}
           </button>
         </div>
       )}

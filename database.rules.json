@@ -1,0 +1,93 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "markets": {
+      "$market_id": {
+        "movie_index": {
+          ".read": true
+        },
+        "movies": {
+          "$movie_id": {
+            "date_index": {
+              ".read": true
+            },
+            "dates": {
+              "$show_date": {
+                "published": {
+                  ".read": true
+                },
+                "analytics_v2": {
+                  "runs": {
+                    "$run_id": {
+                      "summary": {
+                        ".read": true
+                      },
+                      "pages": {
+                        "dimensions": {
+                          "$dimension": {
+                            "$sort_key": {
+                              "$page": {
+                                ".read": true
+                              }
+                            }
+                          }
+                        },
+                        "gross_modes": {
+                          "$gross_mode": {
+                            "$dimension": {
+                              "$sort_key": {
+                                "$page": {
+                                  ".read": true
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "daily_dimensions": {
+                          "$dimension": {
+                            "$sort_key": {
+                              "$page": {
+                                ".read": true
+                              }
+                            }
+                          }
+                        },
+                        "comparisons": {
+                          "$comparison": {
+                            "$change_type": {
+                              "$page": {
+                                ".read": true
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "movie_details": {
+                  "runs": {
+                    "$run_id": {
+                      "pages": {
+                        "$page": {
+                          ".read": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "history": {
+                  ".read": true
+                }
+              }
+            }
+          }
+        },
+        "leaderboards": {
+            ".read": true
+        }
+      }
+    }
+  }
+}
